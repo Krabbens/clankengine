@@ -69,6 +69,36 @@ target_link_libraries(minimal PRIVATE m5_scene clank_warnings)
 
 include(CTest)
 
+foreach(sample pegboard marble_tray)
+  add_executable(${sample} examples/${sample}.cpp)
+  target_link_libraries(${sample} PRIVATE m0_foundation m1_loop m2_render
+    m5_scene m6_input clank_warnings)
+endforeach()
+target_link_libraries(pegboard PRIVATE m3_physics2d)
+target_link_libraries(marble_tray PRIVATE m4_physics3d)
+
+if(BUILD_TESTING)
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+  add_executable(showcase-pixels test/showcase_pixels.cpp)
+  target_link_libraries(showcase-pixels PRIVATE raylib clank_warnings)
+  foreach(sample pegboard marble_tray)
+    add_test(NAME ${sample}-replay COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_SOURCE_DIR}/test/showcase_test.py $<TARGET_FILE:${sample}>
+      ${CMAKE_SOURCE_DIR}/examples/replays/drop.clk)
+    if(sample STREQUAL "pegboard")
+      set(frame 120)
+    else()
+      set(frame 60)
+    endif()
+    if(NOT WIN32)
+      add_test(NAME ${sample}-golden COMMAND bash ${CMAKE_SOURCE_DIR}/test/showcase_golden.sh
+        $<TARGET_FILE:${sample}> $<TARGET_FILE:showcase-pixels>
+        ${CMAKE_SOURCE_DIR}/test/golden/${sample}_frame${frame}.png
+        ${CMAKE_SOURCE_DIR}/examples/replays/drop.clk ${frame})
+    endif()
+  endforeach()
+endif()
+
 function(clank_selftest name lib src inc)
   add_executable(${name} ${src})
   target_include_directories(${name} PRIVATE ${inc})
