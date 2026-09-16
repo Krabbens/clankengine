@@ -16,6 +16,4 @@ struct Scene {
 };
 std::string DumpJson(const Scene& scene);
 std::expected<Scene, std::string> LoadJson(const std::string& text);
-std::expected<void, std::string> AppendClk(const std::string& path, const std::string& line);
-std::expected<std::vector<std::string>, std::string> ReadClk(const std::string& path);
 }  // namespace clank::m5

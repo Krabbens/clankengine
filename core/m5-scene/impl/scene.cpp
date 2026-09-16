@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <fstream>
 namespace clank::m5 {
 namespace {
 // WHY: dump must survive spaces/quotes in names with only stdlib, no JSON dep.
@@ -260,23 +259,5 @@ std::expected<Scene, std::string> LoadJson(const std::string& text) {
   SkipWs(c);
   if (c.p != c.end) return std::unexpected("trailing bytes");
   return s;
-}
-std::expected<void, std::string> AppendClk(const std::string& path, const std::string& line) {
-  std::ofstream o(path, std::ios::app);
-  if (!o) return std::unexpected("open " + path);
-  o << line << '\n';
-  if (!o) return std::unexpected("write " + path);
-  return {};
-}
-std::expected<std::vector<std::string>, std::string> ReadClk(const std::string& path) {
-  std::ifstream in(path);
-  if (!in) return std::unexpected("open " + path);
-  std::vector<std::string> v;
-  std::string l;
-  while (std::getline(in, l)) {
-    if (!l.empty() && l.back() == '\r') l.pop_back();
-    v.push_back(l);
-  }
-  return v;
 }
 }  // namespace clank::m5
