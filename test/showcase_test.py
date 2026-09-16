@@ -8,6 +8,13 @@ import tempfile
 
 binary, replay = map(lambda p: str(Path(p).resolve()), sys.argv[1:])
 name = Path(binary).name
+# WHY load the schema instead of hardcoding keys: the file is the contract, this test keeps it
+# honest on every dump. No third-party validator (dependency rule); structure asserts suffice.
+schema = json.loads((Path(__file__).resolve().parent.parent / "spec" / "scene.schema.json").read_text())
+top_required = set(schema["required"])
+entity_item = schema["properties"]["entities"]["items"]
+entity_required = set(entity_item["required"])
+entity_allowed = set(entity_item["properties"])
 with tempfile.TemporaryDirectory() as temp:
     root = Path(temp)
 
@@ -21,12 +28,20 @@ with tempfile.TemporaryDirectory() as temp:
         assert (root / f"{name}_frame{frames}.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
         text = (root / "scene.json").read_text()
         scene = json.loads(text)
+        assert set(scene) == top_required
         assert scene["seed"] == seed
+        assert scene["version"] in schema["properties"]["version"]["enum"]
+        assert isinstance(scene["entities"], list)
         ids = [e["id"] for e in scene["entities"]]
         assert len(ids) == len(set(ids))
         for entity in scene["entities"]:
+            assert set(entity) >= entity_required
+            assert set(entity) <= entity_allowed
+            assert isinstance(entity["id"], int) and isinstance(entity["name"], str)
             for key in ("x", "y", "angle", "sx", "sy"):
                 assert math.isfinite(entity[key])
+            if "z" in entity:
+                assert math.isfinite(entity["z"])
         return text, scene["entities"]
 
     initial_text, initial = run(0)
