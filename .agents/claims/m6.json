@@ -1,0 +1,13 @@
+{
+  "module": "m6",
+  "agent": "agent-02",
+  "branch": "a/m6-action-map",
+  "started_utc": "2026-09-16T20:53:49Z",
+  "heartbeat_utc": "2026-09-16T20:53:49Z",
+  "ttl_min": 30,
+  "intent": "Add deterministic named action bindings over existing m6::Key and Playback",
+  "paths": [
+    "core/m6-input/"
+  ],
+  "exception": null
+}

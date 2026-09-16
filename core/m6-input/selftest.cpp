@@ -61,6 +61,29 @@ int main() {
   if (invalid.SaveClk(unsorted)) return 1;
   invalid.events = {{0, static_cast<clank::m6::Key>(99), clank::m6::Edge::Down}};
   if (invalid.SaveClk(unsorted)) return 1;
+
+  clank::m6::Playback action_playback;
+  if (!action_playback.Load(p)) return 1;
+  clank::m6::ActionMap actions;
+  if (!clank::m6::Bind(actions, "MoveUp", clank::m6::Key::Up)) return 1;
+  if (!clank::m6::Bind(actions, "Jump", clank::m6::Key::Space)) return 1;
+  auto move_up = clank::m6::IsDown(actions, action_playback, 11, "MoveUp");
+  if (!move_up || !*move_up) return 1;
+  auto jump = clank::m6::IsDown(actions, action_playback, 11, "Jump");
+  if (!jump || *jump) return 1;
+  jump = clank::m6::IsDown(actions, action_playback, 15, "Jump");
+  if (!jump || !*jump) return 1;
+  auto lookup = clank::m6::Lookup(actions, "MoveUp");
+  if (!lookup || *lookup != clank::m6::Key::Up) return 1;
+  auto unknown = clank::m6::IsDown(actions, action_playback, 11, "Unknown");
+  if (unknown || unknown.error() != "unknown action: Unknown") return 1;
+  auto empty = clank::m6::Bind(actions, "", clank::m6::Key::Escape);
+  if (empty || empty.error() != "empty action name") return 1;
+  auto duplicate = clank::m6::Bind(actions, "MoveUp", clank::m6::Key::Down);
+  if (duplicate || duplicate.error() != "duplicate action name: MoveUp") return 1;
+  auto conflict = clank::m6::Bind(actions, "Crouch", clank::m6::Key::Up);
+  if (conflict || conflict.error() != "binding conflict for key") return 1;
+
   std::printf("m6-selftest ok\n");
   return 0;
 }
