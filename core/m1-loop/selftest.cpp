@@ -3,6 +3,15 @@
 #include <cstdio>
 
 int main() {
+  // WHY: windowed code is verified by compile+link only; CI has no display so never open here.
+  if (clank::m1::WindowOpen()) {
+    std::fprintf(stderr, "m1: WindowOpen want false headless\n");
+    return 1;
+  }
+  if (clank::m1::ShouldClose()) {
+    std::fprintf(stderr, "m1: ShouldClose want false headless\n");
+    return 1;
+  }
   clank::m1::LoopConfig cfg{.dt = 1.0 / 60.0, .max_frames = 60};
   int count = 0;
   int last = -1;

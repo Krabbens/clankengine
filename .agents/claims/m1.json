@@ -1,0 +1,13 @@
+{
+  "module": "m1",
+  "agent": "agent-m1c",
+  "branch": "a/m1-window-lifecycle",
+  "started_utc": "2026-09-16T01:05:32Z",
+  "heartbeat_utc": "2026-09-16T01:05:32Z",
+  "ttl_min": 30,
+  "intent": "InitWindow/pump/fixed-step windowed run",
+  "paths": [
+    "core/m1-loop/"
+  ],
+  "exception": null
+}
