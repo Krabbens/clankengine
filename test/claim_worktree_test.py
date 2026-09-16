@@ -18,8 +18,14 @@ with tempfile.TemporaryDirectory(prefix="clank-claim-") as temp:
     claimed_ok = False
     try:
         worktree_tool = str(worktree / "tools" / "clank-claim")
-        claimed = subprocess.run(
+        missing_intent = subprocess.run(
             [worktree_tool, "claim", "m7", "--agent", "test-agent", "--topic", topic],
+            cwd=worktree, capture_output=True, text=True)
+        assert missing_intent.returncode != 0
+        assert "requires --intent" in missing_intent.stderr
+        claimed = subprocess.run(
+            [worktree_tool, "claim", "m7", "--agent", "test-agent", "--topic", topic,
+             "--intent", "verify linked worktree claim"],
             cwd=worktree, check=True, capture_output=True, text=True)
         assert "claimed m7" in claimed.stdout
         claimed_ok = True

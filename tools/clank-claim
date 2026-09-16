@@ -3,7 +3,7 @@
 
 Usage:
   tools/clank-claim list [--json]
-  tools/clank-claim claim <mX> --agent <id> --topic <slug> [--intent "..."] [--ttl-min 30] [--force] [--exception-type allow-big|allow-cross|allow-growth --exception-reason "..." --exception-bench "..."]
+  tools/clank-claim claim <mX> --agent <id> --topic <slug> --intent "..." [--ttl-min 30] [--force] [--exception-type allow-big|allow-cross|allow-growth --exception-reason "..." --exception-bench "..."]
   tools/clank-claim heartbeat <mX> --agent <id>
   tools/clank-claim release <mX> --agent <id>
 
@@ -190,6 +190,8 @@ def cmd_claim(args: argparse.Namespace) -> int:
         fail("claim requires --agent <id>")
     if not args.topic:
         fail("claim requires --topic <slug> (lowercase, digits, dashes)")
+    if not args.intent:
+        fail("claim requires --intent <description>")
     branch = f"a/{args.module}-{args.topic}"
     if not BRANCH_RE.match(branch):
         fail(f"branch {branch!r} violates ^a/m[0-8]-[a-z0-9-]{{1,40}}$")
