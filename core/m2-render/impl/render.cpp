@@ -104,6 +104,22 @@ void DrawCircle(Renderer& r, float x, float y, float radius, Color c) {
   if (::IsWindowReady()) ::DrawCircleV(::Vector2{x, y}, radius, ToRay(c));
 }
 
+void DrawTriangle(Renderer& r, float x1, float y1, float x2, float y2, float x3, float y3,
+                  Color c) {
+  Push(r, DrawEntry{.kind = DrawKind::Triangle,
+                    .x = x1,
+                    .y = y1,
+                    .x2 = x2,
+                    .y2 = y2,
+                    .x3 = x3,
+                    .y3 = y3,
+                    .color = c});
+  // WHY: DrawLog is headless truth; mirror to screen only when a window exists.
+  // Precondition: ::IsWindowReady() must be true before ::DrawTriangle().
+  if (::IsWindowReady())
+    ::DrawTriangle(::Vector2{x1, y1}, ::Vector2{x2, y2}, ::Vector2{x3, y3}, ToRay(c));
+}
+
 void DrawText(Renderer& r, const std::string& text, float x, float y, float size, Color c) {
   Push(r, DrawEntry{.kind = DrawKind::Text, .x = x, .y = y, .w = size, .text = text, .color = c});
   // WHY: default-font text needs a GL context; headless keeps log only.

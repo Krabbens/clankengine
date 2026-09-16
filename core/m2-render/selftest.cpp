@@ -20,6 +20,13 @@ int main() {
   if (e0->kind != clank::m2::DrawKind::Rect) return 1;
   if (e1->kind != clank::m2::DrawKind::Circle) return 1;
   if (e2->kind != clank::m2::DrawKind::Text || e2->text != "hi") return 1;
+  clank::m2::DrawTriangle(r, 1, 2, 3, 4, 5, 6, white);
+  if (clank::m2::DrawLogCount(r) != 4) return 1;
+  const auto* e3 = clank::m2::DrawLogAt(r, 3);
+  if (!e3) return 1;
+  if (e3->kind != clank::m2::DrawKind::Triangle || e3->x != 1 || e3->y != 2 || e3->x2 != 3 ||
+      e3->y2 != 4 || e3->x3 != 5 || e3->y3 != 6)
+    return 1;
   const std::string path = "/tmp/m2-selftest-shot.png";
   if (!clank::m2::TakeScreenshot(r, path)) return 1;
   std::ifstream in(path, std::ios::binary);
