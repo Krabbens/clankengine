@@ -1,11 +1,11 @@
 {
   "module": "m2",
   "agent": "agent-main",
-  "branch": "a/m2-shot-path-robust",
-  "started_utc": "2026-09-16T02:25:20Z",
-  "heartbeat_utc": "2026-09-16T02:25:20Z",
+  "branch": "a/m2-flush-before-shot",
+  "started_utc": "2026-09-16T02:32:05Z",
+  "heartbeat_utc": "2026-09-16T02:32:05Z",
   "ttl_min": 30,
-  "intent": "TakeScreenshot honors directories (raylib 5.5 drops them)",
+  "intent": "rlDrawRenderBatchActive before TakeScreenshot (batch holds shapes)",
   "paths": [
     "core/m2-render/"
   ],
