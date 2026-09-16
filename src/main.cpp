@@ -1,5 +1,5 @@
-// clank app: agent-first game loop on m0 (flags) + m1 (loop) + m2 (render) + m5 (scene).
-// Logs -> stderr; machine-readable result paths -> stdout.
+// clank app: agent-first game loop on m0 (flags) + m1 (loop) + m2 (render) + m5 (scene) + m6
+// (input). Logs -> stderr; machine-readable result paths -> stdout.
 #include <cstdio>
 #include <fstream>
 #include <string>
@@ -8,6 +8,7 @@
 #include "m1/loop.hpp"
 #include "m2/render.hpp"
 #include "m5/scene.hpp"
+#include "m6/input.hpp"
 
 namespace {
 
@@ -50,9 +51,12 @@ int main(int argc, char** argv) {
     return 2;
   }
   const clank::m0::Flags flags = *parsed;
+  clank::m6::Playback playback;
   if (!flags.replay.empty()) {
-    // WHY noted, not silent: m6 input playback lands in wave 4.
-    std::fprintf(stderr, "clank: --replay ignored (input playback TODO)\n");
+    if (auto loaded = playback.Load(flags.replay); !loaded) {
+      std::fprintf(stderr, "clank: %s\n", loaded.error().c_str());
+      return 2;
+    }
   }
 
   clank::m5::Scene scene = DemoScene(flags.seed);
@@ -60,7 +64,18 @@ int main(int argc, char** argv) {
   const int frames = flags.shot_after > 0 ? flags.shot_after : 60;
   std::fprintf(stderr, "clank: %s frames=%d seed=%d\n", flags.headless ? "headless" : "windowed",
                frames, flags.seed);
-  auto update = [&](clank::m1::Frame, double dt) { scene.entities[0].x += static_cast<float>(dt); };
+  auto update = [&](clank::m1::Frame frame, double dt) {
+    if (flags.replay.empty()) {
+      scene.entities[0].x += static_cast<float>(dt);
+      return;
+    }
+    const float x = static_cast<float>(playback.IsDown(frame.number, clank::m6::Key::Right) -
+                                       playback.IsDown(frame.number, clank::m6::Key::Left));
+    const float y = static_cast<float>(playback.IsDown(frame.number, clank::m6::Key::Down) -
+                                       playback.IsDown(frame.number, clank::m6::Key::Up));
+    scene.entities[0].x += x * static_cast<float>(dt);
+    scene.entities[0].y += y * static_cast<float>(dt);
+  };
   clank::m2::Renderer renderer = clank::m2::Create();
 
   if (flags.headless) {
