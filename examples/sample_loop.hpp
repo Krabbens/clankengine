@@ -105,14 +105,20 @@ int Run(int argc, char** argv, const Config& cfg,
     if (!flags->headless) {
       clank::m1::BeginFrame(12, 19, 30, 255);
       draw(*state, renderer);
-      DrawRectangle(0, 0, 1280, 108, {12, 19, 30, 255});
-      DrawText(cfg.header, 40, 22, 18, cfg.accent);
-      DrawText(cfg.title, 40, 48, 34, cfg.ink);
-      DrawText(cfg.subtitle, 40, 88, 16, cfg.muted);
-      DrawRectangle(0, 660, 1280, 60, {12, 19, 30, 255});
-      DrawText(cfg.controls, 40, 684, 18, cfg.ink);
-      DrawText(TextFormat("%s  /  %04d", stepper.paused() ? "PAUSED" : "60 HZ", stepper.next()),
-               1030, 684, 18, cfg.accent);
+      // WHY convert once: Config keeps raylib colors for raw callers, the facade takes its own.
+      const clank::m2::Color accent{cfg.accent.r, cfg.accent.g, cfg.accent.b, cfg.accent.a};
+      const clank::m2::Color ink{cfg.ink.r, cfg.ink.g, cfg.ink.b, cfg.ink.a};
+      const clank::m2::Color muted{cfg.muted.r, cfg.muted.g, cfg.muted.b, cfg.muted.a};
+      clank::m2::DrawRect(renderer, 0, 0, 1280, 108, {12, 19, 30, 255});
+      clank::m2::DrawText(renderer, cfg.header, 40, 22, 18, accent);
+      clank::m2::DrawText(renderer, cfg.title, 40, 48, 34, ink);
+      clank::m2::DrawText(renderer, cfg.subtitle, 40, 88, 16, muted);
+      clank::m2::DrawRect(renderer, 0, 660, 1280, 60, {12, 19, 30, 255});
+      clank::m2::DrawText(renderer, cfg.controls, 40, 684, 18, ink);
+      clank::m2::DrawText(
+          renderer,
+          TextFormat("%s  /  %04d", stepper.paused() ? "PAUSED" : "60 HZ", stepper.next()), 1030,
+          684, 18, accent);
     }
     if (done && flags->shot_after >= 0) {
       const std::string path = std::string(cfg.name) + "_frame" + std::to_string(limit) + ".png";
