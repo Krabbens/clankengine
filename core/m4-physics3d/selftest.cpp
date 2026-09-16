@@ -91,5 +91,37 @@ int main() {
   clank::m4::DestroyBody(dr);
   clank::m4::DestroyBody(zn);
   clank::m4::DestroyWorld(sw);
-  return entered && exited ? 0 : 1;
+  if (!entered || !exited) return 1;
+  // WHY destroy mid-run: end events may reference dead shapes; the facade must skip them, not trap.
+  clank::m4::World* dw = clank::m4::CreateWorld({0.0f, -10.0f, 0.0f});
+  if (dw == nullptr) return 1;
+  clank::m4::BodyDef plate{};
+  plate.shape = clank::m4::ShapeKind::Box;
+  plate.box_hx = 5.0f;
+  plate.box_hy = 0.5f;
+  plate.box_hz = 5.0f;
+  clank::m4::Body* pl = clank::m4::CreateBody(dw, plate);
+  clank::m4::BodyDef shot{};
+  shot.type = clank::m4::BodyType::Dynamic;
+  shot.position = {0.0f, 5.0f, 0.0f};
+  clank::m4::Body* sh = clank::m4::CreateBody(dw, shot);
+  if (pl == nullptr || sh == nullptr) return 1;
+  bool hit = false;
+  for (int i = 0; i < 200 && !hit; ++i) {
+    clank::m4::Step(dw, kDt);
+    for (const auto& t : clank::m4::GetTouches(dw))
+      if (t.began) hit = true;
+  }
+  if (!hit) return 1;
+  clank::m4::DestroyBody(pl);
+  clank::m4::Step(dw, kDt);
+  bool stale = false;
+  for (const auto& t : clank::m4::GetTouches(dw)) {
+    (void)t;
+    stale = true;
+  }
+  std::printf("m4 destroy mid-run=%s\n", !stale ? "PASS" : "FAIL");
+  clank::m4::DestroyBody(sh);
+  clank::m4::DestroyWorld(dw);
+  return stale ? 1 : 0;
 }

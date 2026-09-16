@@ -149,15 +149,22 @@ const Body* FindBody(const World* world, b3BodyId id) {
 std::vector<TouchEvent> GetTouches(World* world) {
   std::vector<TouchEvent> out;
   if (world == nullptr) return out;
+  // WHY validity first: end events may reference shapes destroyed since the last step.
   const b3ContactEvents events = b3World_GetContactEvents(world->id);
   for (int i = 0; i < events.beginCount; ++i) {
-    const Body* a = FindBody(world, b3Shape_GetBody(events.beginEvents[i].shapeIdA));
-    const Body* b = FindBody(world, b3Shape_GetBody(events.beginEvents[i].shapeIdB));
+    const b3ShapeId sa = events.beginEvents[i].shapeIdA;
+    const b3ShapeId sb = events.beginEvents[i].shapeIdB;
+    if (!b3Shape_IsValid(sa) || !b3Shape_IsValid(sb)) continue;
+    const Body* a = FindBody(world, b3Shape_GetBody(sa));
+    const Body* b = FindBody(world, b3Shape_GetBody(sb));
     if (a != nullptr && b != nullptr) out.push_back(TouchEvent{a, b, true});
   }
   for (int i = 0; i < events.endCount; ++i) {
-    const Body* a = FindBody(world, b3Shape_GetBody(events.endEvents[i].shapeIdA));
-    const Body* b = FindBody(world, b3Shape_GetBody(events.endEvents[i].shapeIdB));
+    const b3ShapeId sa = events.endEvents[i].shapeIdA;
+    const b3ShapeId sb = events.endEvents[i].shapeIdB;
+    if (!b3Shape_IsValid(sa) || !b3Shape_IsValid(sb)) continue;
+    const Body* a = FindBody(world, b3Shape_GetBody(sa));
+    const Body* b = FindBody(world, b3Shape_GetBody(sb));
     if (a != nullptr && b != nullptr) out.push_back(TouchEvent{a, b, false});
   }
   return out;
@@ -168,13 +175,19 @@ std::vector<OverlapEvent> GetOverlaps(World* world) {
   if (world == nullptr) return out;
   const b3SensorEvents events = b3World_GetSensorEvents(world->id);
   for (int i = 0; i < events.beginCount; ++i) {
-    const Body* sensor = FindBody(world, b3Shape_GetBody(events.beginEvents[i].sensorShapeId));
-    const Body* visitor = FindBody(world, b3Shape_GetBody(events.beginEvents[i].visitorShapeId));
+    const b3ShapeId ss = events.beginEvents[i].sensorShapeId;
+    const b3ShapeId vs = events.beginEvents[i].visitorShapeId;
+    if (!b3Shape_IsValid(ss) || !b3Shape_IsValid(vs)) continue;
+    const Body* sensor = FindBody(world, b3Shape_GetBody(ss));
+    const Body* visitor = FindBody(world, b3Shape_GetBody(vs));
     if (sensor != nullptr && visitor != nullptr) out.push_back(OverlapEvent{sensor, visitor, true});
   }
   for (int i = 0; i < events.endCount; ++i) {
-    const Body* sensor = FindBody(world, b3Shape_GetBody(events.endEvents[i].sensorShapeId));
-    const Body* visitor = FindBody(world, b3Shape_GetBody(events.endEvents[i].visitorShapeId));
+    const b3ShapeId ss = events.endEvents[i].sensorShapeId;
+    const b3ShapeId vs = events.endEvents[i].visitorShapeId;
+    if (!b3Shape_IsValid(ss) || !b3Shape_IsValid(vs)) continue;
+    const Body* sensor = FindBody(world, b3Shape_GetBody(ss));
+    const Body* visitor = FindBody(world, b3Shape_GetBody(vs));
     if (sensor != nullptr && visitor != nullptr)
       out.push_back(OverlapEvent{sensor, visitor, false});
   }
