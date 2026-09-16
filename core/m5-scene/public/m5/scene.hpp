@@ -34,6 +34,8 @@ std::expected<Scene, std::string> LoadJson(const std::string& text);
 // a second id map. The basis is a 2D affine transform; z is an additive height channel.
 std::expected<std::vector<WorldTransform>, std::string> ResolveWorldTransforms(const Scene& scene);
 // WHY return IDs, not references: callers can keep components in their own storage and reorder it.
+// The result preserves the input span order. The span is the complete component registry: every
+// entry must have a valid owner, non-empty type, and globally unique ID, even when not selected.
 // Components are runtime data in this slice; scene JSON remains backward-compatible.
 std::expected<std::vector<int>, std::string> ResolveComponents(
     const Scene& scene, std::span<const Component> components, int owner);

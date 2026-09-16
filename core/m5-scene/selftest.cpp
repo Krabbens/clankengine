@@ -59,6 +59,10 @@ int main() {
   std::swap(reordered_tree.entities[0], reordered_tree.entities[1]);
   auto reordered_components = clank::m5::ResolveComponents(reordered_tree, components, 11);
   if (!reordered_components || *reordered_components != std::vector<int>{100, 102}) return 1;
+  auto reordered_registry = components;
+  std::swap(reordered_registry[0], reordered_registry[2]);
+  auto input_order = clank::m5::ResolveComponents(tree, reordered_registry, 11);
+  if (!input_order || *input_order != std::vector<int>{102, 100}) return 1;
   if (clank::m5::ResolveComponents(tree, components, 99)) return 1;
   auto missing_owner = components;
   missing_owner[0].owner = 99;
@@ -66,6 +70,9 @@ int main() {
   auto duplicate_component = components;
   duplicate_component[2].id = duplicate_component[0].id;
   if (clank::m5::ResolveComponents(tree, duplicate_component, 11)) return 1;
+  auto duplicate_component_cross_owner = components;
+  duplicate_component_cross_owner[1].id = duplicate_component_cross_owner[0].id;
+  if (clank::m5::ResolveComponents(tree, duplicate_component_cross_owner, 11)) return 1;
   auto duplicate_actor = tree;
   duplicate_actor.entities[2].id = 11;
   if (clank::m5::ResolveComponents(duplicate_actor, components, 11)) return 1;
