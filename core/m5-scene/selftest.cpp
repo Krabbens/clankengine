@@ -37,8 +37,8 @@ int main() {
   if (std::fabs((*world)[1].x - 11.755165f) > 0.001f ||
       std::fabs((*world)[1].y - 20.958851f) > 0.001f ||
       std::fabs((*world)[1].z - 10.0f) > 0.001f ||
-      std::fabs((*world)[2].x - 7.665333f) > 0.001f ||
-      std::fabs((*world)[2].y - 25.348984f) > 0.001f)
+      std::fabs((*world)[2].x - 8.099567f) > 0.001f ||
+      std::fabs((*world)[2].y - 25.586208f) > 0.001f)
     return 1;
   auto missing = tree;
   missing.entities[1].parent = 99;
@@ -49,6 +49,9 @@ int main() {
   auto duplicate = tree;
   duplicate.entities[2].id = 11;
   if (clank::m5::ResolveWorldTransforms(duplicate)) return 1;
+  auto invalid_parent = tree;
+  invalid_parent.entities[1].parent = -2;
+  if (clank::m5::ResolveWorldTransforms(invalid_parent)) return 1;
   // Any key order, extra whitespace, version 1, \u escapes.
   auto reord = clank::m5::LoadJson(
       "{ \"seed\" : 7 , \"entities\" : [ { \"sy\" : 1 , \"sx\" : 1 , \"angle\" : 0 , "
@@ -68,6 +71,15 @@ int main() {
   if (clank::m5::LoadJson("{\"version\":0,\"seed\":1,\"entities\":[{\"id\":1,}]}")) return 1;
   if (clank::m5::LoadJson(
           "{\"version\":0,\"seed\":1,\"entities\":[{\"id\":1,\"name\":\"\\ud800\"}]}"))
+    return 1;
+  if (clank::m5::LoadJson(
+          "{\"version\":0,\"seed\":1,\"entities\":[{\"id\":1,\"name\":\"a\","
+          "\"x\":0,\"y\":0,\"angle\":0,\"sx\":1,\"sy\":1,\"parent\":-2}]}"))
+    return 1;
+  if (clank::m5::LoadJson(
+          "{\"version\":0,\"seed\":1,\"entities\":[{\"id\":1,\"name\":\"a\","
+          "\"x\":0,\"y\":0,\"angle\":0,\"sx\":1,\"sy\":1},{\"id\":1,"
+          "\"name\":\"b\",\"x\":0,\"y\":0,\"angle\":0,\"sx\":1,\"sy\":1}]}"))
     return 1;
   if (clank::m5::LoadJson("{\"version\":0,\"seed\":1.5,\"entities\":[]}")) return 1;
   if (clank::m5::LoadJson("{\"version\":0,\"seed\":2147483648,\"entities\":[]}")) return 1;

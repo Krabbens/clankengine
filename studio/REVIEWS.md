@@ -36,3 +36,11 @@ This was an internal adversarial pass, not an independent reviewer.
 - What did not convince the panel: the feature is not yet visible at the sample/agent workflow boundary.
 - Decision: keep the direction and improve the proof before adding components.
 - Next sprint: use the hierarchy in one headless sample; repair the unrelated Windows CTest harness on m8.
+
+## Follow-up: clanker correction
+
+- Date: 2026-09-16
+- Trigger: the adversarial subagent found that TRS-only world composition lost shear for non-uniform parent scale plus rotated child.
+- Correction: `WorldTransform` now stores an exact 2D affine basis; JSON load and resolve reject invalid negative parents and invalid scene IDs/links.
+- Evidence: Windows rebuild, `m5-selftest`, focused CTest 4/4, and diff check pass.
+- Result: P1 transform bug closed; sample-level proof and full Windows CTest portability remain open.

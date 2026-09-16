@@ -34,8 +34,8 @@
   - Blocks: component ownership and prefab composition.
   - DoD: self-test covers round-trip, rotation/scale composition, missing parent, duplicate ID, and cycle errors; focused Windows suite passes.
   - Next Action: add a headless sample assertion that consumes resolved hierarchy data.
-  - Implementation notes: keep root output backward compatible; `z` remains additive height.
-  - Test/acceptance notes: build passes; focused suite 4/4 passes; full suite has five unrelated Windows harness failures.
+  - Implementation notes: keep root output backward compatible; `z` remains additive height; resolved 2D basis is affine to preserve shear.
+  - Test/acceptance notes: affine regression and invalid-parent JSON tests pass; focused suite 4/4 passes; full suite has five unrelated Windows harness failures.
 
 ### BLOCKED
 

@@ -222,7 +222,7 @@ std::string DumpJson(const Scene& s) {
       o += ",\"z\":";
       AppendFloat(o, e.z);
     }
-    if (e.parent >= 0) o += ",\"parent\":" + std::to_string(e.parent);
+    if (e.parent != -1) o += ",\"parent\":" + std::to_string(e.parent);
     o.push_back('}');
   }
   o += "]}";
@@ -230,27 +230,32 @@ std::string DumpJson(const Scene& s) {
 }
 
 namespace {
-WorldTransform Compose(const WorldTransform& parent, const Entity& local) {
-  const float c = std::cos(parent.angle);
-  const float s = std::sin(parent.angle);
-  const float x = local.x * parent.sx;
-  const float y = local.y * parent.sy;
-  return {parent.x + c * x - s * y,
-          parent.y + s * x + c * y,
-          parent.angle + local.angle,
-          parent.sx * local.sx,
-          parent.sy * local.sy,
-          parent.z + local.z};
+WorldTransform LocalTransform(const Entity& entity) {
+  const float c = std::cos(entity.angle);
+  const float s = std::sin(entity.angle);
+  return {entity.x, entity.y, entity.z, c * entity.sx, -s * entity.sy,
+          s * entity.sx, c * entity.sy};
 }
 
-WorldTransform LocalTransform(const Entity& entity) {
-  return {entity.x, entity.y, entity.angle, entity.sx, entity.sy, entity.z};
+WorldTransform Compose(const WorldTransform& parent, const Entity& local) {
+  const WorldTransform child = LocalTransform(local);
+  return {parent.x + parent.m00 * child.x + parent.m01 * child.y,
+          parent.y + parent.m10 * child.x + parent.m11 * child.y,
+          parent.z + child.z,
+          parent.m00 * child.m00 + parent.m01 * child.m10,
+          parent.m00 * child.m01 + parent.m01 * child.m11,
+          parent.m10 * child.m00 + parent.m11 * child.m10,
+          parent.m10 * child.m01 + parent.m11 * child.m11};
 }
 }  // namespace
 
 std::expected<std::vector<WorldTransform>, std::string> ResolveWorldTransforms(const Scene& scene) {
   std::vector<WorldTransform> world(scene.entities.size());
   std::vector<unsigned char> state(scene.entities.size(), 0);
+  for (const Entity& entity : scene.entities) {
+    if (entity.parent < -1)
+      return std::unexpected("invalid parent id " + std::to_string(entity.parent));
+  }
   for (size_t i = 0; i < scene.entities.size(); ++i) {
     for (size_t j = 0; j < i; ++j) {
       if (scene.entities[i].id == scene.entities[j].id)
@@ -270,7 +275,7 @@ std::expected<std::vector<WorldTransform>, std::string> ResolveWorldTransforms(c
       state[static_cast<size_t>(current)] = 1;
       path.push_back(static_cast<size_t>(current));
       current = find(scene.entities[static_cast<size_t>(current)].parent);
-      if (current < 0 && scene.entities[path.back()].parent >= 0)
+      if (current < 0 && scene.entities[path.back()].parent != -1)
         return std::unexpected("missing parent " +
                                std::to_string(scene.entities[path.back()].parent));
     }
@@ -327,6 +332,8 @@ std::expected<Scene, std::string> LoadJson(const std::string& text) {
   if (!seen_v || !seen_seed || !seen_ent) return std::unexpected("missing key");
   SkipWs(c);
   if (c.p != c.end) return std::unexpected("trailing bytes");
+  if (auto valid = ResolveWorldTransforms(s); !valid)
+    return std::unexpected("invalid scene: " + valid.error());
   return s;
 }
 }  // namespace clank::m5
