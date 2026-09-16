@@ -1,17 +1,13 @@
 {
   "module": "m5",
   "agent": "codex",
-  "branch": "a/m5-scene-hierarchy",
+  "branch": "a/m5-actor-components",
   "started_utc": "2026-09-16T19:40:02Z",
-  "heartbeat_utc": "2026-09-16T19:41:45Z",
+  "heartbeat_utc": "2026-09-16T20:31:04Z",
   "ttl_min": 30,
-  "intent": "Add deterministic parent-child scene transforms",
+  "intent": "Add minimal owner-linked scene components without changing scene wire format",
   "paths": [
     "core/m5-scene/"
   ],
-  "exception": {
-    "type": "allow-cross",
-    "reason": "Extend the m5 scene wire schema with an optional parent id so hierarchy survives dump/load.",
-    "extra_bench": "No runtime benchmark claim; schema-only additive field."
-  }
+  "exception": null
 }
