@@ -1,0 +1,13 @@
+{
+  "module": "m0",
+  "agent": "agent-m0",
+  "branch": "a/m0-foundation-types",
+  "started_utc": "2026-09-16T00:49:29Z",
+  "heartbeat_utc": "2026-09-16T00:49:29Z",
+  "ttl_min": 30,
+  "intent": "types/Log/Config/Clock/RNG/CLI flags",
+  "paths": [
+    "core/m0-foundation/"
+  ],
+  "exception": null
+}
