@@ -1,0 +1,2 @@
+# Keep dir tracked by git. Real claims are m0.json..m8.json (see README.md).
+# m0.example.json is schema documentation only and is ignored by the claim tool and CI.

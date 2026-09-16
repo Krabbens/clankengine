@@ -1,0 +1,26 @@
+name: lint
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: clang-format (dry run on changed C++ files)
+        run: |
+          FILES=$(git diff --name-only origin/main...HEAD -- '*.hpp' '*.cpp' || true)
+          if [ -z "${FILES}" ]; then echo "no C++ files changed"; exit 0; fi
+          echo "${FILES}"
+          clang-format --dry-run -Werror ${FILES}
+
+      - name: Docs check (EN only hint)
+        run: |
+          # Non-blocking: warn if obvious Polish diacritics sneak into code/docs.
+          if git diff origin/main...HEAD -- . | grep -nP '[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]' ; then
+            echo "::warning::possible Polish text in diff (repo language is English)."
+          fi

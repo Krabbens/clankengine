@@ -1,0 +1,92 @@
+name: loc-guard
+# Hard fail on line-count breaches. Keep in sync with ../ci-config.yml.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  loc:
+    runs-on: ubuntu-latest
+    env:
+      CORE_ADDED_MAX: '200'
+      EXTRA_ADDED_MAX: '400'
+      CORE_TOTAL_MAX: '5000'
+      HARD_CAP_CORE: '400'
+      HARD_CAP_EXTRA: '800'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute added lines and totals
+        run: |
+          git fetch origin main --depth=50
+          # numstat added col, excluding test/png/claims per ci-config
+          git diff origin/main...HEAD --numstat -- . \
+            ':!test' ':!*.png' ':!.agents/claims' > /tmp/numstat.txt || true
+          cat /tmp/numstat.txt
+          python3 - <<'EOF' >> "$GITHUB_ENV"
+          import json, os
+          core = extra = 0
+          with open('/tmp/numstat.txt') as f:
+              for line in f:
+                  parts = line.rstrip('\n').split('\t')
+                  if len(parts) != 3:
+                      continue
+                  try:
+                      added = int(parts[0]) if parts[0] != '-' else 0
+                  except ValueError:
+                      added = 0
+                  path = parts[2]
+                  if path.startswith('core/'):
+                      core += added
+                  elif path.startswith(('tools/', 'examples/', 'extra/')):
+                      extra += added
+          print(f"CORE_ADDED={core}")
+          print(f"EXTRA_ADDED={extra}")
+          EOF
+          echo "core_added=${CORE_ADDED} extra_added=${EXTRA_ADDED}"
+          TOTAL=$(git ls-files 'core/' | xargs wc -l 2>/dev/null | tail -n1 | awk '{print $1}')
+          TOTAL=${TOTAL:-0}
+          echo "CORE_TOTAL=${TOTAL}" >> "$GITHUB_ENV"
+          echo "core_total=${TOTAL}"
+          {
+            echo "## LOC gate"
+            echo ""
+            echo "| metric | value | limit |"
+            echo "|---|---|---|"
+            echo "| core added | ${CORE_ADDED} | ${CORE_ADDED_MAX} |"
+            echo "| extra added | ${EXTRA_ADDED} | ${EXTRA_ADDED_MAX} |"
+            echo "| core total | ${TOTAL} | ${CORE_TOTAL_MAX} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce limits (hard fail)
+        run: |
+          ALLOW_BIG="false"
+          if grep -q 'allow-big' "${GITHUB_EVENT_PATH}"; then ALLOW_BIG="true"; fi
+          MAX_CORE="${CORE_ADDED_MAX}"; MAX_EXTRA="${EXTRA_ADDED_MAX}"
+          if [ "${ALLOW_BIG}" = "true" ]; then
+            MAX_CORE="${HARD_CAP_CORE}"; MAX_EXTRA="${HARD_CAP_EXTRA}"
+            echo "allow-big label detected: caps raised to ${MAX_CORE}/${MAX_EXTRA}"
+          fi
+          FAIL=0
+          if [ "${CORE_ADDED}" -gt "${MAX_CORE}" ]; then
+            echo "::error::core added ${CORE_ADDED} > ${MAX_CORE}. Split the PR or request allow-big with reason + bench."
+            FAIL=1
+          fi
+          if [ "${EXTRA_ADDED}" -gt "${MAX_EXTRA}" ]; then
+            echo "::error::extra added ${EXTRA_ADDED} > ${MAX_EXTRA}. Split the PR."
+            FAIL=1
+          fi
+          if [ "${CORE_TOTAL}" -gt "${CORE_TOTAL_MAX}" ]; then
+            if grep -q 'allow-growth' "${GITHUB_EVENT_PATH}"; then
+              echo "::warning::core total ${CORE_TOTAL} exceeds max but allow-growth requested (needs reason)."
+            else
+              echo "::error::core total ${CORE_TOTAL} > ${CORE_TOTAL_MAX}. Needs allow-growth with justification."
+              FAIL=1
+            fi
+          fi
+          exit "${FAIL}"

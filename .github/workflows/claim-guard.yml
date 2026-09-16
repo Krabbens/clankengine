@@ -1,0 +1,113 @@
+name: claim-guard
+# Hard fail if two agents work on the same module, branch/claim mismatch, or stale claim.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    env:
+      BRANCH_REGEX: '^a/m[0-8]-[a-z0-9-]{1,40}$'
+      CLAIM_TTL_MIN: '30'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Branch name must be a/<m>-<topic>
+        run: |
+          HEAD="${GITHUB_HEAD_REF}"
+          echo "head=${HEAD}"
+          if ! echo "${HEAD}" | grep -Eq "${BRANCH_REGEX}"; then
+            echo "::error::branch '${HEAD}' violates ${BRANCH_REGEX} (want a/m3-box2d-wrap)"
+            exit 1
+          fi
+
+      - name: PR must touch exactly one module (unless allow-cross)
+        run: |
+          git fetch origin main --depth=50
+          FILES=$(git diff --name-only origin/main...HEAD -- || true)
+          echo "${FILES}"
+          echo "${FILES}" > /tmp/files.txt
+          MODS=$(grep -oE '(core/m[0-6]-[a-z0-9]+|tools/m7-[a-z]+|examples/|test/|spec/)' /tmp/files.txt | sort -u || true)
+          echo "touched: ${MODS}"
+          # Map touched paths to mX ids
+          python3 - <<'EOF'
+          import re, sys
+          mods = set()
+          with open('/tmp/files.txt') as f:
+              files = [l.strip() for l in f if l.strip()]
+          for p in files:
+              m = re.match(r'core/(m[0-6])-', p)
+              if m:
+                  mods.add(m.group(1)); continue
+              if p.startswith('tools/m7-harness/'):
+                  mods.add('m7'); continue
+              if p.startswith(('examples/', 'test/', 'spec/')):
+                  mods.add('m8'); continue
+          # Non-module files (workflows, claims, docs) do not count toward the 1-module rule,
+          # but a PR with ONLY those and no module is rejected below via missing claim.
+          print('modules:', sorted(mods))
+          with open('/tmp/mods.txt', 'w') as f:
+              f.write('\n'.join(sorted(mods)))
+          EOF
+          N=$(wc -l < /tmp/mods.txt | tr -d ' ')
+          if [ "${N}" -gt 1 ]; then
+            if ! grep -q 'allow-cross' "${GITHUB_EVENT_PATH}"; then
+              echo "::error::PR touches ${N} modules ($(paste -sd, /tmp/mods.txt)). One module per PR, or request allow-cross with RFC."
+              exit 1
+            fi
+          fi
+
+      - name: Claim file must exist, match branch, and be fresh
+        run: |
+          MOD=$(cut -d/ -f1 /tmp/mods.txt | head -n1 || true)
+          if [ -z "${MOD}" ]; then
+            echo "::error::cannot map PR files to a module (m0..m8). Touch your module paths."
+            exit 1
+          fi
+          echo "module=${MOD}" >> "$GITHUB_ENV"
+          CLAIM=".agents/claims/${MOD}.json"
+          if [ ! -f "${CLAIM}" ]; then
+            echo "::error::missing ${CLAIM}. Run: tools/clank-claim claim ${MOD} --agent <you> --topic <slug>"
+            exit 1
+          fi
+          python3 - "$CLAIM" "${GITHUB_HEAD_REF}" "${CLAIM_TTL_MIN}" <<'EOF'
+          import json, sys, datetime
+          path, head, ttl = sys.argv[1], sys.argv[2], int(sys.argv[3])
+          c = json.load(open(path))
+          if c.get("branch") != head:
+              print(f"::error::claim branch {c.get('branch')!r} != PR head {head!r}")
+              sys.exit(1)
+          hb = datetime.datetime.fromisoformat(c["heartbeat_utc"].replace("Z", "+00:00"))
+          age = (datetime.datetime.now(datetime.timezone.utc) - hb).total_seconds()
+          if age > ttl * 60:
+              print(f"::error::claim {path} is stale (heartbeat {c['heartbeat_utc']}). Run heartbeat or reclaim with --force.")
+              sys.exit(1)
+          exc = c.get("exception")
+          if exc is not None:
+              if exc.get("type") not in ("allow-big", "allow-cross", "allow-growth"):
+                  print(f"::error::bad exception.type {exc!r}")
+                  sys.exit(1)
+              if not exc.get("reason"):
+                  print("::error::exception.reason is empty (empty reason = CI fail)")
+                  sys.exit(1)
+          print(f"claim OK: {c['module']} by {c['agent']} ({c['branch']})")
+          EOF
+
+      - name: No second open PR on the same module
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MOD=$(cat /tmp/mods.txt | head -n1)
+          DUPES=$(gh pr list --state open --json number,headRefName --jq \
+            ".[] | select(.headRefName | test(\"^a/${MOD}-\")) | select(.headRefName != \"${GITHUB_HEAD_REF}\") | .headRefName" || true)
+          if [ -n "${DUPES}" ]; then
+            echo "::error::duplicate work on ${MOD}: already open: ${DUPES}. One PR per module."
+            exit 1
+          fi
+          echo "no duplicate PR on ${MOD}"

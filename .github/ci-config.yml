@@ -1,0 +1,32 @@
+# Single source of truth for CI limits, modules, and dependency pins.
+# Workflows in workflows/ MUST keep their env defaults in sync with this file.
+
+limits:
+  core_added: 200        # max added lines in core/ per PR (numstat added col)
+  extra_added: 400       # max added lines in tools/+examples/ per PR
+  core_total: 5000       # max total lines in core/ (git ls-files | xargs wc -l)
+  hard_cap_core: 400     # absolute max with allow-big
+  hard_cap_extra: 800    # absolute max with allow-big
+
+branch_regex: '^a/m[0-8]-[a-z0-9-]{1,40}$'
+claim_ttl_min: 30
+
+modules:
+  m0: ["core/m0-foundation/"]
+  m1: ["core/m1-loop/"]
+  m2: ["core/m2-render/"]
+  m3: ["core/m3-physics2d/"]
+  m4: ["core/m4-physics3d/"]
+  m5: ["core/m5-scene/"]
+  m6: ["core/m6-input/"]
+  m7: ["tools/m7-harness/"]
+  m8: ["examples/", "test/", "spec/"]
+
+excluded_from_limits: ["test/", ".png", ".agents/claims/"]
+
+deps:
+  raylib: "5.5"
+  box2d: "v3.1.1"
+  box3d_commit: "PIN-ME"  # TODO(m4): pin Box3D alpha commit hash on first use
+  cmake_min: "3.28"
+  compilers: ["clang-18", "gcc-13"]

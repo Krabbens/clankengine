@@ -1,0 +1,31 @@
+name: claim-sweep
+# Labels stale claims. Read-only; never deletes.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Report fresh vs stale claims
+        run: |
+          python3 - <<'EOF'
+          import json, glob, datetime, os
+          now = datetime.datetime.now(datetime.timezone.utc)
+          for path in sorted(glob.glob('.agents/claims/m*.json')):
+              if path.endswith('.example.json'):
+                  continue
+              try:
+                  c = json.load(open(path))
+                  hb = datetime.datetime.fromisoformat(c['heartbeat_utc'].replace('Z', '+00:00'))
+                  age_min = (now - hb).total_seconds() / 60
+                  ttl = int(c.get('ttl_min', 30))
+                  state = 'STALE' if age_min > ttl else 'fresh'
+                  print(f"{state}: {path} agent={c.get('agent')} branch={c.get('branch')} age_min={age_min:.1f}/{ttl}")
+              except Exception as e:
+                  print(f"BROKEN: {path}: {e}")
+          EOF

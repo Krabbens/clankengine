@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "clankengine scene dump (stub v0)",
+  "type": "object",
+  "required": ["version", "seed", "entities"],
+  "properties": {
+    "version": { "type": "integer" },
+    "seed": { "type": "integer" },
+    "entities": { "type": "array", "items": { "type": "object" } }
+  }
+}

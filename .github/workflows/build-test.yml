@@ -1,0 +1,43 @@
+name: build-test
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        compiler: [clang, gcc]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Headless smoke (dump + shot)
+        run: |
+          ./build/clank --headless --shot-after 60 --dump-scene /tmp/scene.json --seed 42
+          test -f /tmp/scene.json
+          ls -la /tmp/*.png || true
+
+      - name: Upload observability artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-${{ matrix.compiler }}
+          path: |
+            /tmp/scene.json
+            /tmp/*.png
+          if-no-files-found: warn

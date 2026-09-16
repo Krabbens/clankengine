@@ -1,0 +1,11 @@
+{
+  "module": "m0",
+  "agent": "example-agent",
+  "branch": "a/m0-example",
+  "started_utc": "2026-09-16T10:00:00Z",
+  "heartbeat_utc": "2026-09-16T10:00:00Z",
+  "ttl_min": 30,
+  "intent": "EXAMPLE ONLY — delete before claiming. Shows required schema.",
+  "paths": ["core/m0-foundation/"],
+  "exception": null
+}

@@ -1,0 +1,217 @@
+#!/usr/bin/env python3
+"""clank-claim: file-based mutex so two agents never work on the same module.
+
+Usage:
+  tools/clank-claim list [--json]
+  tools/clank-claim claim <mX> --agent <id> --topic <slug> [--intent "..."] [--ttl-min 30] [--force] [--exception-type allow-big|allow-cross|allow-growth --exception-reason "..." --exception-bench "..."]
+  tools/clank-claim heartbeat <mX> --agent <id>
+  tools/clank-claim release <mX> --agent <id>
+
+No dependencies beyond Python 3.10 stdlib. Exit 0 on success, 1 with stderr hint on fail.
+Claim files live in .agents/claims/mX.json (m0.example.json is ignored).
+"""
+from __future__ import annotations
+
+import argparse
+import datetime
+import json
+import os
+import re
+import sys
+import typing
+
+MODULES = [f"m{i}" for i in range(9)]
+MODULE_PATHS = {
+    "m0": ["core/m0-foundation/"],
+    "m1": ["core/m1-loop/"],
+    "m2": ["core/m2-render/"],
+    "m3": ["core/m3-physics2d/"],
+    "m4": ["core/m4-physics3d/"],
+    "m5": ["core/m5-scene/"],
+    "m6": ["core/m6-input/"],
+    "m7": ["tools/m7-harness/"],
+    "m8": ["examples/", "test/", "spec/"],
+}
+BRANCH_RE = re.compile(r"^a/m[0-8]-[a-z0-9-]{1,40}$")
+
+
+def repo_root() -> str:
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.path.dirname(here) if os.path.basename(here) == "tools" else os.getcwd()
+
+
+def claims_dir() -> str:
+    return os.path.join(repo_root(), ".agents", "claims")
+
+
+def claim_path(module: str) -> str:
+    return os.path.join(claims_dir(), f"{module}.json")
+
+
+def utcnow() -> datetime.datetime:
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
+def parse_utc(s: str) -> datetime.datetime:
+    try:
+        dt = datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        return dt
+    except ValueError:
+        fail(f"bad UTC timestamp: {s!r}, want 2026-09-16T10:00:00Z")
+
+
+def fail(msg: str) -> "typing.NoReturn":
+    print(f"clank-claim: error: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def load_claim(module: str) -> dict | None:
+    p = claim_path(module)
+    if not os.path.exists(p):
+        return None
+    with open(p, encoding="utf-8") as f:
+        try:
+            data = json.load(f)
+        except json.JSONDecodeError as e:
+            fail(f"{p} is not valid JSON: {e}")
+    return data
+
+
+def is_fresh(claim: dict) -> bool:
+    try:
+        hb = parse_utc(claim["heartbeat_utc"])
+        ttl = int(claim.get("ttl_min", 30))
+    except KeyError as e:
+        fail(f"claim missing field {e}")
+    return (utcnow() - hb).total_seconds() < ttl * 60
+
+
+def validate_module(m: str) -> None:
+    if m not in MODULES:
+        fail(f"bad module {m!r}, want one of {MODULES}")
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    rows = []
+    for m in MODULES:
+        c = load_claim(m)
+        if c is None:
+            rows.append({"module": m, "status": "free", "agent": None, "branch": None,
+                         "heartbeat_utc": None, "intent": None})
+        else:
+            rows.append({"module": m, "status": "fresh" if is_fresh(c) else "stale",
+                         "agent": c.get("agent"), "branch": c.get("branch"),
+                         "heartbeat_utc": c.get("heartbeat_utc"), "intent": c.get("intent")})
+    if args.json:
+        print(json.dumps(rows, indent=2))
+    else:
+        print(f"{'module':<6} {'status':<6} {'agent':<12} {'branch':<24} intent")
+        for r in rows:
+            print(f"{r['module']:<6} {r['status']:<6} {str(r['agent'] or '-'): <12} "
+                  f"{str(r['branch'] or '-'): <24} {r['intent'] or ''}")
+    return 0
+
+
+def cmd_claim(args: argparse.Namespace) -> int:
+    validate_module(args.module)
+    if not args.agent:
+        fail("claim requires --agent <id>")
+    if not args.topic:
+        fail("claim requires --topic <slug> (lowercase, digits, dashes)")
+    branch = f"a/{args.module}-{args.topic}"
+    if not BRANCH_RE.match(branch):
+        fail(f"branch {branch!r} violates ^a/m[0-8]-[a-z0-9-]{{1,40}}$")
+    existing = load_claim(args.module)
+    if existing is not None and is_fresh(existing) and not args.force:
+        fail(f"{args.module} is claimed by {existing.get('agent')} on {existing.get('branch')} "
+             f"(heartbeat {existing.get('heartbeat_utc')}). Pick another module or wait for stale.")
+    if existing is not None and args.force and is_fresh(existing):
+        print(f"warning: --force takeover of fresh claim by {existing.get('agent')}; "
+              f"link the stale PR as required by AGENTS.md", file=sys.stderr)
+    now = utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    exception = None
+    if args.exception_type:
+        if not args.exception_reason:
+            fail("--exception-type requires --exception-reason (empty reason = CI fail)")
+        if args.exception_type not in ("allow-big", "allow-cross", "allow-growth"):
+            fail(f"bad --exception-type {args.exception_type!r}")
+        exception = {"type": args.exception_type, "reason": args.exception_reason,
+                     "extra_bench": args.exception_bench or ""}
+    claim = {"module": args.module, "agent": args.agent, "branch": branch,
+             "started_utc": existing.get("started_utc", now) if existing and args.force else now,
+             "heartbeat_utc": now, "ttl_min": args.ttl_min,
+             "intent": args.intent or "", "paths": MODULE_PATHS[args.module],
+             "exception": exception}
+    os.makedirs(claims_dir(), exist_ok=True)
+    with open(claim_path(args.module), "w", encoding="utf-8") as f:
+        json.dump(claim, f, indent=2)
+        f.write("\n")
+    print(f"claimed {args.module} on {branch}")
+    print(f"next: git checkout -b {branch}")
+    return 0
+
+
+def cmd_heartbeat(args: argparse.Namespace) -> int:
+    validate_module(args.module)
+    c = load_claim(args.module)
+    if c is None:
+        fail(f"no claim for {args.module}; run claim first")
+    if c.get("agent") != args.agent:
+        fail(f"claim {args.module} belongs to {c.get('agent')}, not {args.agent}")
+    c["heartbeat_utc"] = utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    with open(claim_path(args.module), "w", encoding="utf-8") as f:
+        json.dump(c, f, indent=2)
+        f.write("\n")
+    print(f"heartbeat {args.module} at {c['heartbeat_utc']}")
+    return 0
+
+
+def cmd_release(args: argparse.Namespace) -> int:
+    validate_module(args.module)
+    c = load_claim(args.module)
+    if c is None:
+        fail(f"no claim for {args.module}")
+    if c.get("agent") != args.agent:
+        fail(f"claim {args.module} belongs to {c.get('agent')}, not {args.agent}")
+    os.remove(claim_path(args.module))
+    print(f"released {args.module}")
+    return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(prog="clank-claim", description="Claim a module so no two agents collide.")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p_list = sub.add_parser("list", help="show free/fresh/stale modules")
+    p_list.add_argument("--json", action="store_true")
+    p_claim = sub.add_parser("claim", help="claim a free (or stale) module")
+    p_claim.add_argument("module")
+    p_claim.add_argument("--agent", default="")
+    p_claim.add_argument("--topic", default="")
+    p_claim.add_argument("--intent", default="")
+    p_claim.add_argument("--ttl-min", type=int, default=30)
+    p_claim.add_argument("--force", action="store_true", help="take over a stale claim")
+    p_claim.add_argument("--exception-type", default="")
+    p_claim.add_argument("--exception-reason", default="")
+    p_claim.add_argument("--exception-bench", default="")
+    p_hb = sub.add_parser("heartbeat", help="refresh heartbeat")
+    p_hb.add_argument("module")
+    p_hb.add_argument("--agent", default="")
+    p_rel = sub.add_parser("release", help="delete claim after merge")
+    p_rel.add_argument("module")
+    p_rel.add_argument("--agent", default="")
+    args = ap.parse_args()
+    if args.cmd == "list":
+        return cmd_list(args)
+    if args.cmd == "claim":
+        return cmd_claim(args)
+    if args.cmd == "heartbeat":
+        return cmd_heartbeat(args)
+    if args.cmd == "release":
+        return cmd_release(args)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
