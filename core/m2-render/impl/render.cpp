@@ -192,6 +192,22 @@ void DrawCylinder(Renderer& r, float x, float y, float z, float r_top, float r_b
     ::DrawCylinder(::Vector3{x, y, z}, r_top, r_bottom, height, slices, ToRay(c));
 }
 
+void DrawCylinderWires(Renderer& r, float x, float y, float z, float r_top, float r_bottom,
+                       float height, int slices, Color c) {
+  Push3D(r, Draw3DEntry{.kind = Draw3DKind::CylinderWires,
+                        .x = x,
+                        .y = y,
+                        .z = z,
+                        .a = r_top,
+                        .b = r_bottom,
+                        .c = height,
+                        .n = slices,
+                        .color = c});
+  // Precondition: ::IsWindowReady() must be true before ::DrawCylinderWires().
+  if (::IsWindowReady())
+    ::DrawCylinderWires(::Vector3{x, y, z}, r_top, r_bottom, height, slices, ToRay(c));
+}
+
 std::size_t Draw3DLogCount(const Renderer& r) {
   auto it = Logs3D().find(r.id);
   if (!r.valid || it == Logs3D().end()) return 0;
