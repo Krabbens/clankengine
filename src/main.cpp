@@ -1,13 +1,13 @@
 // clank app: agent-first game loop on m0 (flags) + m1 (loop) + m2 (render) + m5 (scene).
 // Logs -> stderr; machine-readable result paths -> stdout.
+#include <cstdio>
+#include <fstream>
+#include <string>
+
 #include "m0/foundation.hpp"
 #include "m1/loop.hpp"
 #include "m2/render.hpp"
 #include "m5/scene.hpp"
-
-#include <cstdio>
-#include <fstream>
-#include <string>
 
 namespace {
 
@@ -56,12 +56,11 @@ int main(int argc, char** argv) {
   }
 
   clank::m5::Scene scene = DemoScene(flags.seed);
-  const int frames = flags.shot_after >= 0 ? flags.shot_after : 60;
+  // WHY N-1: frames run 0..N-1, so the shot shows state after exactly N frames.
+  const int frames = flags.shot_after > 0 ? flags.shot_after : 60;
   std::fprintf(stderr, "clank: %s frames=%d seed=%d\n", flags.headless ? "headless" : "windowed",
                frames, flags.seed);
-  auto update = [&](clank::m1::Frame, double dt) {
-    scene.entities[0].x += static_cast<float>(dt);
-  };
+  auto update = [&](clank::m1::Frame, double dt) { scene.entities[0].x += static_cast<float>(dt); };
   clank::m2::Renderer renderer = clank::m2::Create();
 
   if (flags.headless) {
@@ -75,28 +74,44 @@ int main(int argc, char** argv) {
       std::printf("%s\n", ShotPath(flags.shot_after).c_str());
     }
   } else {
+    // WHY lockstep, not RunWindowed: wall-clock pacing ties sim frames to GPU
+    // speed, so frame N would land on different pixels per machine. One update
+    // + one draw per iteration makes --shot-after deterministic.
+    auto win = clank::m1::OpenWindow({});
+    if (!win) {
+      std::fprintf(stderr, "clank: %s (hint: use --headless without a display)\n",
+                   win.error().c_str());
+      return 1;
+    }
     int frame = -1;
+    int draws = 0;
     auto counted = [&](clank::m1::Frame f, double dt) {
       frame = f.number;
       update(f, dt);
     };
     auto draw = [&]() {
+      ++draws;
       clank::m1::BeginFrame(20, 20, 30, 255);
       clank::m2::DrawRect(renderer, scene.entities[0].x * 60.0f, 300.0f, 40.0f, 40.0f,
                           {255, 255, 255, 255});
-      if (flags.shot_after >= 0 && frame == flags.shot_after) {
-        // WHY inside draw: real TakeScreenshot needs an open window + active frame.
-        auto shot = clank::m2::TakeScreenshot(renderer, ShotPath(frame));
-        if (shot) std::printf("%s\n", ShotPath(frame).c_str());
+      if (flags.shot_after > 0 && frame == flags.shot_after - 1) {
+        // WHY loud failure: a silent no-shot wastes a whole CI cycle to diagnose.
+        auto shot = clank::m2::TakeScreenshot(renderer, ShotPath(flags.shot_after));
+        if (shot) {
+          std::printf("%s\n", ShotPath(flags.shot_after).c_str());
+        } else {
+          std::fprintf(stderr, "clank: shot frame=%d failed: %s\n", frame, shot.error().c_str());
+        }
       }
       clank::m1::EndFrame();
     };
-    auto ran = clank::m1::RunWindowed({1.0 / 60.0, frames}, {}, counted, draw);
-    if (!ran) {
-      std::fprintf(stderr, "clank: %s (hint: use --headless without a display)\n",
-                   ran.error().c_str());
-      return 1;
+    clank::m1::Stepper stepper(1.0 / 60.0);
+    for (int i = 0; i < frames && !clank::m1::ShouldClose(); ++i) {
+      stepper.StepOnce(counted);
+      draw();
     }
+    std::fprintf(stderr, "clank: windowed done last_frame=%d draws=%d\n", frame, draws);
+    clank::m1::CloseWindow();
   }
 
   clank::m2::Destroy(renderer);

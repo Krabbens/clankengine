@@ -92,4 +92,7 @@ add_test(NAME minimal-sample COMMAND minimal)
 if(NOT WIN32)
   add_test(NAME golden-minimal-scene
     COMMAND sh -c "$<TARGET_FILE:minimal> > ${CMAKE_BINARY_DIR}/minimal_out.json && ${CMAKE_COMMAND} -E compare_files ${CMAKE_BINARY_DIR}/minimal_out.json ${CMAKE_SOURCE_DIR}/test/golden/minimal_scene.json")
+  # WHY script, not inline: windowed run needs xvfb when present, skip otherwise.
+  add_test(NAME windowed-golden
+    COMMAND sh ${CMAKE_SOURCE_DIR}/test/windowed_golden.sh $<TARGET_FILE:clank> ${CMAKE_SOURCE_DIR}/test/golden/windowed_frame60.png)
 endif()

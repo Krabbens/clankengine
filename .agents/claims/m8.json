@@ -1,11 +1,11 @@
 {
   "module": "m8",
   "agent": "agent-main",
-  "branch": "a/m8-wave-flow-docs",
-  "started_utc": "2026-09-16T01:13:04Z",
-  "heartbeat_utc": "2026-09-16T01:13:04Z",
+  "branch": "a/m8-windowed-ci",
+  "started_utc": "2026-09-16T02:01:38Z",
+  "heartbeat_utc": "2026-09-16T02:44:28Z",
   "ttl_min": 30,
-  "intent": "document per-wave PR/review/merge flow + map AGENTS.md to m8",
+  "intent": "xvfb windowed render in CI + real golden PNG",
   "paths": [
     "examples/",
     "test/",
