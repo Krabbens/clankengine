@@ -1,0 +1,13 @@
+{
+  "module": "m7",
+  "agent": "agent-m5",
+  "branch": "a/m7-harness-shot",
+  "started_utc": "2026-09-16T00:49:31Z",
+  "heartbeat_utc": "2026-09-16T00:49:31Z",
+  "ttl_min": 30,
+  "intent": "harness shot helper",
+  "paths": [
+    "tools/m7-harness/"
+  ],
+  "exception": null
+}
