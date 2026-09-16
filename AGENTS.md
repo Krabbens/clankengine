@@ -116,7 +116,23 @@ Goal: two agents NEVER work on the same module.
 3. Read the module `public/` headers + its tests. No drive-by edits elsewhere.
 4. Minimal change (§7 limits). Build + test locally.
 5. Visual verify (§9): `dump-scene` + `shot-after` + diff before/after.
-6. Push, open PR with the template below, wait for CI, fix, merge, release claim.
+6. Push the branch early, open a PR, get green CI + review (§6.1), merge,
+   release claim.
+
+### 6.1 Wave flow (every wave ships via PRs, no exceptions)
+
+1. One claim + one branch `a/<m>-<topic>` per module slice. Work lands only
+   on its branch.
+2. Open the PR as soon as CI can run on it. Description uses the template below.
+3. CI (`claim-guard`, `loc-guard`, `build-test`, `lint`) must be green.
+   Branch protection blocks merge otherwise. No bypass, no human exception.
+4. Review: the brain reads the FULL diff (line budget §7, style §8, tests,
+   replay/golden evidence) and posts findings as PR review comments.
+   Fix, re-push, re-review until clean.
+5. Merge with `gh pr merge --merge` (one merge commit per module per wave),
+   delete the branch, `tools/clank-claim release <mX>`.
+6. Direct pushes to `main` are forbidden by branch protection.
+   `main` moves only via reviewed, green PRs.
 
 PR description MUST contain:
 
