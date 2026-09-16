@@ -37,4 +37,15 @@ with tempfile.TemporaryDirectory() as temp:
     assert not [e for e in scene["entities"] if e["name"] == "rupee"], "no rupees left"
     particles = [e for e in scene["entities"] if e["name"] == "particle"]
     assert particles, "win state must expose deterministic celebration particles"
+
+    restart = root / "restart.clk"
+    restart.write_text("0 Right Down\n10 Right Up\n20 Restart Down\n21 Restart Up\n")
+    restarted = root / "restart-scene.json"
+    subprocess.run([binary, "--headless", "--shot-after", "21", "--dump-scene", str(restarted),
+                    "--seed", "42", "--replay", str(restart)], cwd=root,
+                   capture_output=True, text=True, check=True)
+    restart_scene = json.loads(restarted.read_text())
+    restart_state = next(e for e in restart_scene["entities"] if e["name"] == "state")
+    assert restart_state["x"] == 5 and restart_state["y"] == 0 and restart_state["angle"] == 0, \
+        f"restart must restore a fresh run, got {restart_state}"
 print("zelda-win: 5 rupees, exit reached, deterministic PASS")

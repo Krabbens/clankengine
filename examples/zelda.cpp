@@ -104,9 +104,9 @@ struct Game {
   clank::m2::Sfx pickup{};
   clank::m2::Sfx sword{};
   clank::m2::Sfx fanfare{};
+  int seed_value = 42;
 
   explicit Game(int seed) {
-    clank::m0::Seed(rng, static_cast<uint64_t>(seed));
     // WHY tones here: square pickup, saw sword, square fanfare; silent without a device.
     audio = clank::m2::OpenAudio();
     pickup = clank::m2::LoadTone(audio, 880, 90, 0);
@@ -119,6 +119,25 @@ struct Game {
     player_model = clank::m2::LoadModel("", {0.62f, 0.8f, 0.62f});
     player_material = clank::m2::CreateMaterial({90, 200, 120, 255}, 0.85f);
     player_animation = clank::m2::CreateAnimation(2, 4.0f);
+    ResetWorld(seed);
+  }
+
+  void ResetWorld(int seed) {
+    seed_value = seed;
+    clank::m0::Seed(rng, static_cast<uint64_t>(seed));
+    px = -5.5f;
+    pz = 3.5f;
+    fx = 1;
+    fz = 0;
+    atk = 0;
+    inv = 0;
+    hp = 5;
+    rupees = 0;
+    status = 0;
+    next_particle = 0;
+    for (auto& p : particles) p = {};
+    player_animation.frame = 0;
+    player_animation.elapsed = 0;
     const float bx[5] = {-3.0f, 3.0f, 0.0f, -4.0f, 4.0f};
     const float bz[5] = {3.0f, 3.0f, 0.0f, -3.0f, 2.0f};
     for (int i = 0; i < 5; ++i) {
@@ -136,6 +155,8 @@ struct Game {
       enemies[i].wt = 1.0f + static_cast<float>(clank::m0::NextFloat01(rng)) * 2.0f;
     }
   }
+
+  void Restart() { ResetWorld(seed_value); }
 
   ~Game() {
     clank::m2::UnloadAnimation(player_animation);
@@ -177,7 +198,12 @@ struct Game {
     }
   }
 
-  void Update(float dt, bool up, bool down, bool left, bool right, bool atk_edge) {
+  void Update(float dt, bool up, bool down, bool left, bool right, bool atk_edge, bool restart_edge,
+              bool interact_edge) {
+    if (restart_edge) {
+      Restart();
+      return;
+    }
     clank::m2::AdvanceAnimation(player_animation, dt);
     UpdateParticles(dt);
     if (status == 2) return;
@@ -256,7 +282,7 @@ struct Game {
         clank::m2::PlaySfx(audio, pickup);
       }
     }
-    if (status == 0 && rupees >= 5) {
+    if (status == 0 && rupees >= 5 && interact_edge) {
       const float dx = kExitX - px;
       const float dz = kExitZ - pz;
       // WHY inside status==0: the outer guard makes this edge-triggered, so the fanfare fires once.
@@ -367,14 +393,16 @@ struct Game {
 
 int main(int argc, char** argv) {
   bool prev_atk = false;
+  bool prev_restart = false;
+  bool prev_interact = false;
   return sample_loop::Run<zelda::Game>(
       argc, argv,
       {"zelda",
        "CLANK / ZELDA LAB",
        "Triforce garden / 3D",
        "Seeded dungeon, sword combat, replayable input",
-       "Arrows/WASD: move | Space: sword | P: pause | N: step | Esc: exit\n",
-       "ARROWS/WASD move  SPACE sword  P pause  N step",
+       "Arrows/WASD: move, Space sword, E interact, R restart | P pause | N step | Esc exit\n",
+       "ARROWS/WASD move  SPACE sword  E interact  R restart  P pause  N step",
        {70, 218, 195, 255},
        {226, 235, 244, 255},
        {135, 158, 181, 255}},
@@ -389,8 +417,13 @@ int main(int argc, char** argv) {
         const bool lf = held(clank::m6::Key::Left, KEY_LEFT, KEY_A);
         const bool rt = held(clank::m6::Key::Right, KEY_RIGHT, KEY_D);
         const bool atk = held(clank::m6::Key::Space, KEY_SPACE, KEY_SPACE);
-        game.Update(static_cast<float>(dt), up, dn, lf, rt, atk && !prev_atk);
+        const bool restart = held(clank::m6::Key::Restart, KEY_R, KEY_R);
+        const bool interact = held(clank::m6::Key::Interact, KEY_E, KEY_E);
+        game.Update(static_cast<float>(dt), up, dn, lf, rt, atk && !prev_atk,
+                    restart && !prev_restart, interact && !prev_interact);
         prev_atk = atk;
+        prev_restart = restart;
+        prev_interact = interact;
       },
       [](const zelda::Game& game, clank::m2::Renderer& renderer) { game.Draw(renderer); },
       [](const zelda::Game& game, int seed) { return game.Scene(seed); });
