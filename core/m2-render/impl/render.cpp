@@ -3,6 +3,7 @@
 #include <raylib.h>
 #include <rlgl.h>
 
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <system_error>
@@ -67,9 +68,10 @@ void End(Renderer& r) {
 }
 
 void Clear(Renderer& r, Color c) {
-  (void)r;
-  // WHY: headless Clear stays a no-op for the log; mirror clear only with a window.
+  // WHY: DrawLog is frame truth, so Clear starts a new frame headless too.
   // Precondition: ::IsWindowReady() must be true before ::ClearBackground().
+  auto it = Logs().find(r.id);
+  if (r.valid && it != Logs().end()) it->second.clear();
   if (::IsWindowReady()) ::ClearBackground(ToRay(c));
 }
 
@@ -143,6 +145,65 @@ std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::st
   out.write(reinterpret_cast<const char*>(kDotPng), sizeof(kDotPng));
   if (!out) return std::unexpected("m2: cannot write " + path);
   return {};
+}
+
+std::expected<bool, std::string> CompareImages(const std::string& path_a, const std::string& path_b,
+                                               double max_diff_frac) {
+  // WHY NaN-safe range check: !(NaN in range) is true, so NaN is rejected.
+  if (!(max_diff_frac >= 0.0 && max_diff_frac <= 1.0))
+    return std::unexpected("m2: max_diff_frac out of [0,1]");
+  namespace fs = std::filesystem;
+  std::error_code ec;
+  if (!fs::exists(path_a, ec) || ec) return std::unexpected("m2: missing " + path_a);
+  if (!fs::exists(path_b, ec) || ec) return std::unexpected("m2: missing " + path_b);
+  // WHY raylib decode, not stdlib: PNG+zlib by hand is ~200 lines; LoadImage is
+  // CPU-side and needs no window, so headless agents can compare goldens.
+  ::Image a = ::LoadImage(path_a.c_str());
+  ::Image b = ::LoadImage(path_b.c_str());
+  if (!a.data) {
+    if (b.data) ::UnloadImage(b);
+    return std::unexpected("m2: cannot decode " + path_a);
+  }
+  if (!b.data) {
+    ::UnloadImage(a);
+    return std::unexpected("m2: cannot decode " + path_b);
+  }
+  const long long aw = a.width, ah = a.height, bw = b.width, bh = b.height;
+  if (aw <= 0 || ah <= 0 || bw <= 0 || bh <= 0 || aw * bh != bw * ah) {
+    ::UnloadImage(a);
+    ::UnloadImage(b);
+    return std::unexpected("m2: size mismatch");
+  }
+  // WHY downscale the larger: shrinking loses the least; nearest keeps the flat
+  // palette while filtering would invent edge colors.
+  if (aw != bw || ah != bh) {
+    if (aw > bw)
+      ::ImageResizeNN(&a, b.width, b.height);
+    else
+      ::ImageResizeNN(&b, a.width, a.height);
+  }
+  ::Color* pa = ::LoadImageColors(a);
+  ::Color* pb = ::LoadImageColors(b);
+  if (!pa || !pb) {
+    if (pa) ::UnloadImageColors(pa);
+    if (pb) ::UnloadImageColors(pb);
+    ::UnloadImage(a);
+    ::UnloadImage(b);
+    return std::unexpected("m2: cannot read pixels");
+  }
+  const long long pixels = static_cast<long long>(a.width) * a.height;
+  long long changed = 0;
+  for (long long i = 0; i < pixels; ++i) {
+    if (std::abs(pa[i].r - pb[i].r) > 5 || std::abs(pa[i].g - pb[i].g) > 5 ||
+        std::abs(pa[i].b - pb[i].b) > 5)
+      ++changed;
+  }
+  const double frac = static_cast<double>(changed) / static_cast<double>(pixels);
+  ::UnloadImageColors(pa);
+  ::UnloadImageColors(pb);
+  ::UnloadImage(a);
+  ::UnloadImage(b);
+  return frac <= max_diff_frac;
 }
 
 }  // namespace clank::m2

@@ -42,5 +42,11 @@ void DrawText(Renderer& r, const std::string& text, float x, float y, float size
 // Backend calls raylib only when IsWindowReady(); headless keeps DrawLog + 1x1 PNG
 // (WHY: agents need the see-channel without a display).
 std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::string& path);
+// Fuzz compare of two PNGs: true when the fraction of pixels differing by more
+// than 5 per channel is within max_diff_frac. Same aspect required; the larger
+// is downscaled nearest-neighbor (WHY: Retina vs logical captures, GPU dither).
+[[nodiscard]] std::expected<bool, std::string> CompareImages(const std::string& path_a,
+                                                             const std::string& path_b,
+                                                             double max_diff_frac);
 
 }  // namespace clank::m2
