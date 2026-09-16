@@ -13,13 +13,8 @@
 namespace clank::m2 {
 namespace {
 
-// STUB: minimal 1x1 PNG until raylib backend lands (WHY: agents need pixels with no window).
-constexpr unsigned char kDotPng[] = {
-    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
-    0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00,
-    0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78,
-    0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
-    0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82};
+constexpr int kHeadlessWidth = 1280;
+constexpr int kHeadlessHeight = 720;
 
 std::unordered_map<int, std::vector<DrawEntry>>& Logs() {
   static std::unordered_map<int, std::vector<DrawEntry>> logs;
@@ -29,6 +24,11 @@ std::unordered_map<int, std::vector<DrawEntry>>& Logs() {
 int& NextId() {
   static int next = 0;
   return next;
+}
+
+std::unordered_map<int, Color>& Backgrounds() {
+  static std::unordered_map<int, Color> backgrounds;
+  return backgrounds;
 }
 
 void Push(const Renderer& r, DrawEntry e) {
@@ -55,12 +55,14 @@ Renderer Create() {
   int id = NextId()++;
   Logs()[id] = {};
   Logs3D()[id] = {};
+  Backgrounds()[id] = {};
   return Renderer{.id = id, .valid = true};
 }
 
 void Destroy(Renderer& r) {
   Logs().erase(r.id);
   Logs3D().erase(r.id);
+  Backgrounds().erase(r.id);
   r.id = -1;
   r.valid = false;
 }
@@ -72,6 +74,8 @@ void Clear(Renderer& r, Color c) {
   if (r.valid && it != Logs().end()) it->second.clear();
   auto it3 = Logs3D().find(r.id);
   if (r.valid && it3 != Logs3D().end()) it3->second.clear();
+  auto bg = Backgrounds().find(r.id);
+  if (r.valid && bg != Backgrounds().end()) bg->second = c;
   if (::IsWindowReady()) ::ClearBackground(ToRay(c));
 }
 
@@ -236,9 +240,11 @@ const DrawEntry* DrawLogAt(const Renderer& r, std::size_t i) {
 }
 
 std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::string& path) {
-  (void)r;
+  auto log = Logs().find(r.id);
+  auto bg = Backgrounds().find(r.id);
+  if (!r.valid || log == Logs().end() || bg == Backgrounds().end())
+    return std::unexpected("m2: invalid renderer");
   // WHY: real pixels need a window; headless agents still need see-channel bytes.
-  // Precondition: ::IsWindowReady() selects real ::TakeScreenshot vs stub PNG.
   if (::IsWindowReady()) {
     // WHY flush first: raylib batches shapes on CPU and submits at EndDrawing;
     // reading pixels before the flush would capture only the cleared background.
@@ -264,10 +270,30 @@ std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::st
     }
     return std::unexpected("m2: screenshot missing at " + path);
   }
-  std::ofstream out(path, std::ios::binary);
-  if (!out) return std::unexpected("m2: cannot open " + path);
-  out.write(reinterpret_cast<const char*>(kDotPng), sizeof(kDotPng));
-  if (!out) return std::unexpected("m2: cannot write " + path);
+  ::Image image = ::GenImageColor(kHeadlessWidth, kHeadlessHeight, ToRay(bg->second));
+  if (!image.data) return std::unexpected("m2: cannot allocate headless image");
+  for (const DrawEntry& e : log->second) {
+    switch (e.kind) {
+      case DrawKind::Rect:
+        ::ImageDrawRectangle(&image, static_cast<int>(e.x), static_cast<int>(e.y),
+                             static_cast<int>(e.w), static_cast<int>(e.h), ToRay(e.color));
+        break;
+      case DrawKind::Circle:
+        ::ImageDrawCircle(&image, static_cast<int>(e.x), static_cast<int>(e.y),
+                          static_cast<int>(e.w), ToRay(e.color));
+        break;
+      case DrawKind::Triangle:
+        ::ImageDrawTriangle(&image, {e.x, e.y}, {e.x2, e.y2}, {e.x3, e.y3}, ToRay(e.color));
+        break;
+      case DrawKind::Text:
+        // WHY: raylib's default-font image path can dereference GPU state on Linux headless;
+        // DrawLog still preserves text for machine inspection and windowed rendering is intact.
+        break;
+    }
+  }
+  const bool exported = ::ExportImage(image, path.c_str());
+  ::UnloadImage(image);
+  if (!exported) return std::unexpected("m2: cannot write " + path);
   return {};
 }
 
