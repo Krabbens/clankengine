@@ -286,8 +286,8 @@ std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::st
         ::ImageDrawTriangle(&image, {e.x, e.y}, {e.x2, e.y2}, {e.x3, e.y3}, ToRay(e.color));
         break;
       case DrawKind::Text:
-        ::ImageDrawText(&image, e.text.c_str(), static_cast<int>(e.x), static_cast<int>(e.y),
-                        static_cast<int>(e.w), ToRay(e.color));
+        // WHY: raylib's default-font image path can dereference GPU state on Linux headless;
+        // DrawLog still preserves text for machine inspection and windowed rendering is intact.
         break;
     }
   }
