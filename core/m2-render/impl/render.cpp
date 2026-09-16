@@ -113,6 +113,7 @@ void DrawTriangle(Renderer& r, float x1, float y1, float x2, float y2, float x3,
                     .y2 = y2,
                     .x3 = x3,
                     .y3 = y3,
+                    .text = {},
                     .color = c});
   // WHY: DrawLog is headless truth; mirror to screen only when a window exists.
   // Precondition: ::IsWindowReady() must be true before ::DrawTriangle().
