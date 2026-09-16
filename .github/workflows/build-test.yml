@@ -41,6 +41,8 @@ jobs:
           ls -la /tmp/*.png || true
 
       - name: Upload observability artifacts
+        # WHY always: a failing pixel test is precisely when we need the image.
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: obs-${{ matrix.compiler }}

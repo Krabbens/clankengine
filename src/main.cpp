@@ -85,7 +85,8 @@ int main(int argc, char** argv) {
                           {255, 255, 255, 255});
       if (flags.shot_after > 0 && frame == flags.shot_after - 1) {
         // WHY inside draw: real TakeScreenshot needs an open window + active frame.
-        auto shot = clank::m2::TakeScreenshot(renderer, ShotPath(frame));
+        // WHY shot_after, not frame: headless and windowed must emit the same path.
+        auto shot = clank::m2::TakeScreenshot(renderer, ShotPath(flags.shot_after));
         if (shot) std::printf("%s\n", ShotPath(frame).c_str());
       }
       clank::m1::EndFrame();
