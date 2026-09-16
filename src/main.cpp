@@ -74,6 +74,15 @@ int main(int argc, char** argv) {
       std::printf("%s\n", ShotPath(flags.shot_after).c_str());
     }
   } else {
+    // WHY lockstep, not RunWindowed: wall-clock pacing ties sim frames to GPU
+    // speed, so frame N would land on different pixels per machine. One update
+    // + one draw per iteration makes --shot-after deterministic.
+    auto win = clank::m1::OpenWindow({});
+    if (!win) {
+      std::fprintf(stderr, "clank: %s (hint: use --headless without a display)\n",
+                   win.error().c_str());
+      return 1;
+    }
     int frame = -1;
     int draws = 0;
     auto counted = [&](clank::m1::Frame f, double dt) {
@@ -96,13 +105,13 @@ int main(int argc, char** argv) {
       }
       clank::m1::EndFrame();
     };
-    auto ran = clank::m1::RunWindowed({1.0 / 60.0, frames}, {}, counted, draw);
-    if (!ran) {
-      std::fprintf(stderr, "clank: %s (hint: use --headless without a display)\n",
-                   ran.error().c_str());
-      return 1;
+    clank::m1::Stepper stepper(1.0 / 60.0);
+    for (int i = 0; i < frames && !clank::m1::ShouldClose(); ++i) {
+      stepper.StepOnce(counted);
+      draw();
     }
     std::fprintf(stderr, "clank: windowed done last_frame=%d draws=%d\n", frame, draws);
+    clank::m1::CloseWindow();
   }
 
   clank::m2::Destroy(renderer);
