@@ -1,6 +1,7 @@
 #pragma once
 // WHY: header stays STDLIB-only so Box3D never leaks outside this module.
 // WHY: scalar yaw (not b3Quat) keeps the facade tiny; backend converts to quaternion.
+#include <vector>
 
 namespace clank::m4 {
 
@@ -41,5 +42,12 @@ void Step(World* world, float dt);
 Vec3 GetPosition(const Body* body);
 float GetAngle(const Body* body);
 Vec3 GetVelocity(const Body* body);
+// WHY snapshot, not drain: Box3D keeps events until the next Step, so this reflects the last step.
+struct TouchEvent {
+  const Body* a = nullptr;
+  const Body* b = nullptr;
+  bool began = true;
+};
+std::vector<TouchEvent> GetTouches(World* world);
 
 }  // namespace clank::m4
