@@ -59,9 +59,9 @@ add_library(m6_input STATIC core/m6-input/impl/input.cpp)
 target_link_libraries(m6_input PUBLIC clank_warnings)
 target_include_directories(m6_input PUBLIC core/m6-input/public)
 
-# clank app: headless-first game loop on m0/m1/m2/m5.
+# clank app: headless-first game loop on m0/m1/m2/m5/m6.
 add_executable(clank src/main.cpp)
-target_link_libraries(clank PRIVATE m0_foundation m1_loop m2_render m5_scene clank_warnings)
+target_link_libraries(clank PRIVATE m0_foundation m1_loop m2_render m5_scene m6_input clank_warnings)
 
 # m8 sample: headless scene dump/reload demo.
 add_executable(minimal examples/minimal.cpp)
@@ -120,6 +120,11 @@ clank_selftest(m5-selftest m5_scene core/m5-scene/selftest.cpp core/m5-scene/pub
 clank_selftest(m6-selftest m6_input core/m6-input/selftest.cpp core/m6-input/public)
 
 add_test(NAME smoke-headless-dump COMMAND clank --headless --shot-after 60 --dump-scene ${CMAKE_BINARY_DIR}/scene.json --seed 42)
+add_test(NAME clank-replay COMMAND ${Python3_EXECUTABLE}
+  ${CMAKE_SOURCE_DIR}/test/clank_replay_test.py $<TARGET_FILE:clank>
+  ${CMAKE_SOURCE_DIR}/examples/replays/drop.clk)
+add_test(NAME claim-worktree-isolation COMMAND ${Python3_EXECUTABLE}
+  ${CMAKE_SOURCE_DIR}/test/claim_worktree_test.py ${CMAKE_SOURCE_DIR}/tools/clank-claim)
 add_test(NAME minimal-sample COMMAND minimal)
 
 # WHY shell compare, unix-only: CTest cannot diff stdout; CI matrix is ubuntu-only.
