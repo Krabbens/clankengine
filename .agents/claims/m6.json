@@ -1,0 +1,13 @@
+{
+  "module": "m6",
+  "agent": "codex",
+  "branch": "a/m6-clk-validation",
+  "started_utc": "2026-09-16T05:22:19Z",
+  "heartbeat_utc": "2026-09-16T05:22:55Z",
+  "ttl_min": 30,
+  "intent": "Validate and normalize deterministic .clk replay input",
+  "paths": [
+    "core/m6-input/"
+  ],
+  "exception": null
+}
