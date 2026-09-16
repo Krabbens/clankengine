@@ -77,6 +77,9 @@ Body* CreateBody(World* world, const BodyDef& def) {
   sdef.baseMaterial.friction = def.friction;
   // WHY always on: events are buffered until queried; no callbacks, no cost when unread.
   sdef.enableContactEvents = true;
+  // WHY same treatment: any overlap with a sensor reports, whichever side asked for events.
+  sdef.enableSensorEvents = true;
+  sdef.isSensor = def.sensor;
   b3ShapeId sid = b3_nullShapeId;
   if (def.shape == ShapeKind::Sphere) {
     const b3Sphere sphere{{0.0f, 0.0f, 0.0f}, def.sphere_r};
@@ -156,6 +159,24 @@ std::vector<TouchEvent> GetTouches(World* world) {
     const Body* a = FindBody(world, b3Shape_GetBody(events.endEvents[i].shapeIdA));
     const Body* b = FindBody(world, b3Shape_GetBody(events.endEvents[i].shapeIdB));
     if (a != nullptr && b != nullptr) out.push_back(TouchEvent{a, b, false});
+  }
+  return out;
+}
+
+std::vector<OverlapEvent> GetOverlaps(World* world) {
+  std::vector<OverlapEvent> out;
+  if (world == nullptr) return out;
+  const b3SensorEvents events = b3World_GetSensorEvents(world->id);
+  for (int i = 0; i < events.beginCount; ++i) {
+    const Body* sensor = FindBody(world, b3Shape_GetBody(events.beginEvents[i].sensorShapeId));
+    const Body* visitor = FindBody(world, b3Shape_GetBody(events.beginEvents[i].visitorShapeId));
+    if (sensor != nullptr && visitor != nullptr) out.push_back(OverlapEvent{sensor, visitor, true});
+  }
+  for (int i = 0; i < events.endCount; ++i) {
+    const Body* sensor = FindBody(world, b3Shape_GetBody(events.endEvents[i].sensorShapeId));
+    const Body* visitor = FindBody(world, b3Shape_GetBody(events.endEvents[i].visitorShapeId));
+    if (sensor != nullptr && visitor != nullptr)
+      out.push_back(OverlapEvent{sensor, visitor, false});
   }
   return out;
 }

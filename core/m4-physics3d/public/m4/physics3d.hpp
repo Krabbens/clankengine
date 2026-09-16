@@ -28,6 +28,8 @@ struct BodyDef {
   float box_hz = 0.5f;
   float density = 1.0f;
   float friction = 0.4f;
+  // WHY opt-in: sensors skip collision response, so only explicit triggers observe overlaps.
+  bool sensor = false;
 };
 
 struct World;
@@ -49,5 +51,12 @@ struct TouchEvent {
   bool began = true;
 };
 std::vector<TouchEvent> GetTouches(World* world);
+// WHY sensor/visitor, not a/b: Box3D always reports which side is the sensor.
+struct OverlapEvent {
+  const Body* sensor = nullptr;
+  const Body* visitor = nullptr;
+  bool began = true;
+};
+std::vector<OverlapEvent> GetOverlaps(World* world);
 
 }  // namespace clank::m4
