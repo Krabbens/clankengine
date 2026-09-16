@@ -33,6 +33,12 @@ jobs:
           FILES=$(git diff --name-only origin/main...HEAD -- || true)
           echo "${FILES}"
           echo "${FILES}" > /tmp/files.txt
+          # WHY: claim files are bookkeeping, excluded from loc limits already;
+          # a PR that only creates/deletes them (claim/release) auto-passes.
+          if ! grep -qvE '^\.agents/claims/' /tmp/files.txt; then
+            echo "claims bookkeeping only, auto-pass"
+            exit 0
+          fi
           MODS=$(grep -oE '(core/m[0-6]-[a-z0-9]+|tools/m7-[a-z]+|examples/|test/|spec/|src/|AGENTS\.md)' /tmp/files.txt | sort -u || true)
           echo "touched: ${MODS}"
           # Map touched paths to mX ids
