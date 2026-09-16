@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 namespace clank::m6 {
-enum class Key : int { Up, Down, Left, Right, Space, Escape };
+enum class Key : int { Up, Down, Left, Right, Space, Restart, Interact, Escape };
 enum class Edge : int { Down, Up };
 struct InputEvent {
   int frame = 0;

@@ -1,0 +1,13 @@
+{
+  "module": "m6",
+  "agent": "agent-main",
+  "branch": "a/m6-restart-input",
+  "started_utc": "2026-09-16T16:27:08Z",
+  "heartbeat_utc": "2026-09-16T16:27:08Z",
+  "ttl_min": 30,
+  "intent": "Add a replayable restart action to the input contract",
+  "paths": [
+    "core/m6-input/"
+  ],
+  "exception": null
+}
