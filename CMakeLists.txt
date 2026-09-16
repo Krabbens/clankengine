@@ -110,8 +110,8 @@ if(BUILD_TESTING)
     add_test(NAME zelda-windowed-golden COMMAND bash
       ${CMAKE_SOURCE_DIR}/test/zelda_windowed_golden.sh $<TARGET_FILE:zelda>
       $<TARGET_FILE:showcase-pixels>
-      ${CMAKE_SOURCE_DIR}/test/golden/zelda_frame600.png
-      ${CMAKE_SOURCE_DIR}/examples/replays/zelda_win.clk 600)
+      ${CMAKE_SOURCE_DIR}/test/golden/zelda_frame1080.png
+      ${CMAKE_SOURCE_DIR}/examples/replays/zelda_win.clk 1080)
   endif()
   add_test(NAME breakout-game COMMAND ${Python3_EXECUTABLE}
     ${CMAKE_SOURCE_DIR}/test/breakout_test.py $<TARGET_FILE:breakout>

@@ -24,7 +24,7 @@ Run from the repository root; PNGs are written to the current directory:
 ```sh
 ./build/pegboard --shot-after 120 --replay examples/replays/drop.clk --dump-scene /tmp/pegboard.json --seed 42
 ./build/marble_tray --shot-after 60 --replay examples/replays/drop.clk --dump-scene /tmp/tray.json --seed 42
-./build/zelda --headless --shot-after 600 --replay examples/replays/zelda_win.clk --dump-scene /tmp/zelda.json --seed 42
+./build/zelda --headless --shot-after 1080 --replay examples/replays/zelda_win.clk --dump-scene /tmp/zelda.json --seed 42
 ./build/pegboard --headless --shot-after 240 --replay examples/replays/drop.clk --dump-scene /tmp/replayed.json --seed 42
 ```
 

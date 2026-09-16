@@ -1,4 +1,4 @@
-"""Prove the zelda sample is beatable: a fixed replay collects 5 rupees and exits."""
+"""Prove the zelda sample is beatable: a fixed replay collects 8 rupees and exits."""
 import json
 import subprocess
 import sys
@@ -11,7 +11,7 @@ assert name == "zelda"
 with tempfile.TemporaryDirectory() as temp:
     root = Path(temp)
 
-    def run(frames=600, seed=42):
+    def run(frames=1080, seed=42):
         out = root / "scene.json"
         command = [binary, "--headless", "--shot-after", str(frames),
                    "--dump-scene", "scene.json", "--seed", str(seed),
@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory() as temp:
     assert second_shot == first_shot, "rendered screenshot must be deterministic"
     scene = json.loads(first)
     state = next(e for e in scene["entities"] if e["name"] == "state")
-    assert state["y"] == 5, f"all rupees collected, got {state['y']}"
+    assert state["y"] == 8, f"all rupees collected, got {state['y']}"
     assert state["x"] >= 1, f"player alive, got hp {state['x']}"
     assert state["angle"] == 1, f"exit reached, got status {state['angle']}"
     assert not [e for e in scene["entities"] if e["name"] == "rupee"], "no rupees left"
@@ -48,4 +48,4 @@ with tempfile.TemporaryDirectory() as temp:
     restart_state = next(e for e in restart_scene["entities"] if e["name"] == "state")
     assert restart_state["x"] == 5 and restart_state["y"] == 0 and restart_state["angle"] == 0, \
         f"restart must restore a fresh run, got {restart_state}"
-print("zelda-win: 5 rupees, exit reached, deterministic PASS")
+print("zelda-win: 8 rupees, exit reached, deterministic PASS")
