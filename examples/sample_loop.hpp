@@ -51,7 +51,7 @@ template <class State>
 int Run(int argc, char** argv, const Config& cfg,
         std::function<std::unique_ptr<State>(int seed)> make,
         std::function<void(State&, const Context&, int frame, double dt)> step,
-        std::function<void(const State&)> draw,
+        std::function<void(const State&, clank::m2::Renderer&)> draw,
         std::function<clank::m5::Scene(const State&, int seed)> scene) {
   if (argc == 2 && std::string(argv[1]) == "--help") {
     std::fprintf(stderr,
@@ -74,6 +74,7 @@ int Run(int argc, char** argv, const Config& cfg,
     SetTargetFPS(60);
   }
   auto state = make(flags->seed);
+  auto renderer = clank::m2::Create();
   Context ctx{&playback, flags->headless, !flags->replay.empty()};
   clank::m1::Stepper stepper(1.0 / 60.0);
   const int limit = flags->shot_after >= 0 ? flags->shot_after : flags->headless ? 240 : -1;
@@ -101,7 +102,9 @@ int Run(int argc, char** argv, const Config& cfg,
     const bool done = limit >= 0 && stepper.next() == limit;
     if (!flags->headless) {
       clank::m1::BeginFrame(12, 19, 30, 255);
-      draw(*state);
+      // WHY per-frame Clear: the 3D log mirrors DrawLog frame semantics for agent readers.
+      clank::m2::Clear(renderer, {0, 0, 0, 0});
+      draw(*state, renderer);
       DrawRectangle(0, 0, 1280, 108, {12, 19, 30, 255});
       DrawText(cfg.header, 40, 22, 18, cfg.accent);
       DrawText(cfg.title, 40, 48, 34, cfg.ink);
@@ -125,6 +128,7 @@ int Run(int argc, char** argv, const Config& cfg,
     if (done) break;
   }
   clank::m1::CloseWindow();
+  clank::m2::Destroy(renderer);
   if (!flags->dump_scene.empty()) {
     std::ofstream out(flags->dump_scene);
     out << clank::m5::DumpJson(scene(*state, flags->seed));

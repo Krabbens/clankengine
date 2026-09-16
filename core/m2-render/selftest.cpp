@@ -26,7 +26,24 @@ int main() {
   if (!in) return 1;
   // Clear starts a new frame in the log.
   clank::m2::Clear(r, white);
-  if (clank::m2::DrawLogCount(r) != 0) return 1;
+  if (clank::m2::DrawLogCount(r) != 0 || clank::m2::Draw3DLogCount(r) != 0) return 1;
+  clank::m2::Camera cam{{0, 14, 10}, {0, 0, 0}, {0, 1, 0}, 45};
+  clank::m2::BeginMode3D(r, cam);
+  clank::m2::DrawCube(r, 1, 2, 3, 4, 5, 6, white);
+  clank::m2::DrawCubeWires(r, 1, 2, 3, 4, 5, 6, white);
+  clank::m2::DrawSphere(r, 1, 2, 3, 4, white);
+  clank::m2::DrawSphereWires(r, 1, 2, 3, 4, 6, 8, white);
+  clank::m2::DrawCylinder(r, 1, 2, 3, 4, 5, 6, 8, white);
+  clank::m2::EndMode3D(r);
+  if (clank::m2::Draw3DLogCount(r) != 5) return 1;
+  const auto* c0 = clank::m2::Draw3DLogAt(r, 0);
+  const auto* c4 = clank::m2::Draw3DLogAt(r, 4);
+  if (!c0 || !c4) return 1;
+  if (c0->kind != clank::m2::Draw3DKind::Cube || c0->a != 4 || c0->c != 6) return 1;
+  if (c4->kind != clank::m2::Draw3DKind::Cylinder || c4->a != 4 || c4->b != 5) return 1;
+  if (clank::m2::Draw3DLogAt(r, 5) != nullptr) return 1;
+  clank::m2::Clear(r, white);
+  if (clank::m2::DrawLogCount(r) != 0 || clank::m2::Draw3DLogCount(r) != 0) return 1;
   clank::m2::DrawRect(r, 0, 0, 1, 1, white);
   if (clank::m2::DrawLogCount(r) != 1) return 1;
   // Identical stubs compare equal; bad inputs are errors, not false.

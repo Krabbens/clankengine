@@ -1,0 +1,17 @@
+{
+  "module": "m2",
+  "agent": "agent-zelda",
+  "branch": "a/m2-draw3d",
+  "started_utc": "2026-09-16T05:47:48Z",
+  "heartbeat_utc": "2026-09-16T05:52:40Z",
+  "ttl_min": 30,
+  "intent": "3D draw facade plus marble migration",
+  "paths": [
+    "core/m2-render/"
+  ],
+  "exception": {
+    "type": "allow-cross",
+    "reason": "3D calls live in examples/marble_tray.cpp; migrating it in the same PR proves the facade and ships zero dead API",
+    "extra_bench": "frame update_ms p50/p95/p99 before/after in PR body"
+  }
+}

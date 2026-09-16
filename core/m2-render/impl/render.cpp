@@ -36,6 +36,16 @@ void Push(const Renderer& r, DrawEntry e) {
   if (r.valid && it != Logs().end()) it->second.push_back(std::move(e));
 }
 
+std::unordered_map<int, std::vector<Draw3DEntry>>& Logs3D() {
+  static std::unordered_map<int, std::vector<Draw3DEntry>> logs;
+  return logs;
+}
+
+void Push3D(const Renderer& r, Draw3DEntry e) {
+  auto it = Logs3D().find(r.id);
+  if (r.valid && it != Logs3D().end()) it->second.push_back(std::move(e));
+}
+
 // WHY: public header stays stdlib-only so translate to raylib color at the boundary.
 ::Color ToRay(Color c) { return ::Color{c.r, c.g, c.b, c.a}; }
 
@@ -44,11 +54,13 @@ void Push(const Renderer& r, DrawEntry e) {
 Renderer Create() {
   int id = NextId()++;
   Logs()[id] = {};
+  Logs3D()[id] = {};
   return Renderer{.id = id, .valid = true};
 }
 
 void Destroy(Renderer& r) {
   Logs().erase(r.id);
+  Logs3D().erase(r.id);
   r.id = -1;
   r.valid = false;
 }
@@ -72,6 +84,8 @@ void Clear(Renderer& r, Color c) {
   // Precondition: ::IsWindowReady() must be true before ::ClearBackground().
   auto it = Logs().find(r.id);
   if (r.valid && it != Logs().end()) it->second.clear();
+  auto it3 = Logs3D().find(r.id);
+  if (r.valid && it3 != Logs3D().end()) it3->second.clear();
   if (::IsWindowReady()) ::ClearBackground(ToRay(c));
 }
 
@@ -97,6 +111,97 @@ void DrawText(Renderer& r, const std::string& text, float x, float y, float size
   if (::IsWindowReady())
     ::DrawText(text.c_str(), static_cast<int>(x), static_cast<int>(y), static_cast<int>(size),
                ToRay(c));
+}
+
+// WHY: public header stays stdlib-only so translate the camera at the boundary, like colors.
+::Camera3D ToRayCam(Camera camera) {
+  return ::Camera3D{{camera.position.x, camera.position.y, camera.position.z},
+                    {camera.target.x, camera.target.y, camera.target.z},
+                    {camera.up.x, camera.up.y, camera.up.z},
+                    camera.fov,
+                    CAMERA_PERSPECTIVE};
+}
+
+void BeginMode3D(Renderer& r, Camera camera) {
+  (void)r;
+  // WHY: headless keeps the 3D log only; mirror to GPU once m1 owns a window.
+  // Precondition: ::IsWindowReady() must be true before ::BeginMode3D().
+  if (::IsWindowReady()) ::BeginMode3D(ToRayCam(camera));
+}
+
+void EndMode3D(Renderer& r) {
+  (void)r;
+  // WHY: 3D state without a window is undefined; guard keeps headless safe.
+  // Precondition: ::IsWindowReady() must be true before ::EndMode3D().
+  if (::IsWindowReady()) ::EndMode3D();
+}
+
+void PushCube(Renderer& r, Draw3DKind kind, float x, float y, float z, float sx, float sy, float sz,
+              Color c) {
+  Push3D(r,
+         Draw3DEntry{.kind = kind, .x = x, .y = y, .z = z, .a = sx, .b = sy, .c = sz, .color = c});
+}
+
+void DrawCube(Renderer& r, float x, float y, float z, float sx, float sy, float sz, Color c) {
+  PushCube(r, Draw3DKind::Cube, x, y, z, sx, sy, sz, c);
+  // WHY: Draw3DLog is headless truth; mirror to screen only when a window exists.
+  // Precondition: ::IsWindowReady() must be true before ::DrawCube().
+  if (::IsWindowReady()) ::DrawCube(::Vector3{x, y, z}, sx, sy, sz, ToRay(c));
+}
+
+void DrawCubeWires(Renderer& r, float x, float y, float z, float sx, float sy, float sz, Color c) {
+  PushCube(r, Draw3DKind::CubeWires, x, y, z, sx, sy, sz, c);
+  // Precondition: ::IsWindowReady() must be true before ::DrawCubeWires().
+  if (::IsWindowReady()) ::DrawCubeWires(::Vector3{x, y, z}, sx, sy, sz, ToRay(c));
+}
+
+void DrawSphere(Renderer& r, float x, float y, float z, float radius, Color c) {
+  Push3D(r,
+         Draw3DEntry{.kind = Draw3DKind::Sphere, .x = x, .y = y, .z = z, .a = radius, .color = c});
+  // Precondition: ::IsWindowReady() must be true before ::DrawSphere().
+  if (::IsWindowReady()) ::DrawSphere(::Vector3{x, y, z}, radius, ToRay(c));
+}
+
+void DrawSphereWires(Renderer& r, float x, float y, float z, float radius, int rings, int slices,
+                     Color c) {
+  Push3D(r, Draw3DEntry{.kind = Draw3DKind::SphereWires,
+                        .x = x,
+                        .y = y,
+                        .z = z,
+                        .a = radius,
+                        .n = rings,
+                        .m = slices,
+                        .color = c});
+  // Precondition: ::IsWindowReady() must be true before ::DrawSphereWires().
+  if (::IsWindowReady()) ::DrawSphereWires(::Vector3{x, y, z}, radius, rings, slices, ToRay(c));
+}
+
+void DrawCylinder(Renderer& r, float x, float y, float z, float r_top, float r_bottom, float height,
+                  int slices, Color c) {
+  Push3D(r, Draw3DEntry{.kind = Draw3DKind::Cylinder,
+                        .x = x,
+                        .y = y,
+                        .z = z,
+                        .a = r_top,
+                        .b = r_bottom,
+                        .c = height,
+                        .n = slices,
+                        .color = c});
+  // Precondition: ::IsWindowReady() must be true before ::DrawCylinder().
+  if (::IsWindowReady())
+    ::DrawCylinder(::Vector3{x, y, z}, r_top, r_bottom, height, slices, ToRay(c));
+}
+
+std::size_t Draw3DLogCount(const Renderer& r) {
+  auto it = Logs3D().find(r.id);
+  if (!r.valid || it == Logs3D().end()) return 0;
+  return it->second.size();
+}
+
+const Draw3DEntry* Draw3DLogAt(const Renderer& r, std::size_t i) {
+  auto it = Logs3D().find(r.id);
+  if (!r.valid || it == Logs3D().end() || i >= it->second.size()) return nullptr;
+  return &it->second[i];
 }
 
 std::size_t DrawLogCount(const Renderer& r) {
