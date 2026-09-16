@@ -1,0 +1,13 @@
+{
+  "module": "m0",
+  "agent": "agent-zelda",
+  "branch": "a/m0-drop-log",
+  "started_utc": "2026-09-16T07:50:58Z",
+  "heartbeat_utc": "2026-09-16T07:51:49Z",
+  "ttl_min": 30,
+  "intent": "Remove unused Log level API",
+  "paths": [
+    "core/m0-foundation/"
+  ],
+  "exception": null
+}

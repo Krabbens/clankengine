@@ -1,15 +1,9 @@
 #include "m0/foundation.hpp"
 
 #include <charconv>
-#include <cstdio>
 #include <string>
 
 namespace clank::m0 {
-
-void Log(Level level, std::string_view msg) {
-  const char* tag = level == Level::Warn ? "warn" : level == Level::Error ? "error" : "info";
-  std::fprintf(stderr, "clank [%s] %.*s\n", tag, static_cast<int>(msg.size()), msg.data());
-}
 
 void Seed(Rng& rng, uint64_t seed) { rng.state = seed; }
 
