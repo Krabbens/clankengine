@@ -1,0 +1,15 @@
+{
+  "module": "m8",
+  "agent": "agent-main",
+  "branch": "a/m8-zelda-restart",
+  "started_utc": "2026-09-16T16:32:53Z",
+  "heartbeat_utc": "2026-09-16T16:32:53Z",
+  "ttl_min": 30,
+  "intent": "Add replayable Zelda interaction and restart flow",
+  "paths": [
+    "examples/",
+    "test/",
+    "spec/"
+  ],
+  "exception": null
+}
