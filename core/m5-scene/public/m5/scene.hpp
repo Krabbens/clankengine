@@ -19,6 +19,10 @@ struct Component {
   int owner = 0;
   std::string type;
 };
+struct ComponentStore {
+  // WHY own components here: IDs must not depend on a caller's temporary span or vector index.
+  std::vector<Component> components;
+};
 struct Scene {
   int seed = 42;
   std::vector<Entity> entities;
@@ -39,4 +43,11 @@ std::expected<std::vector<WorldTransform>, std::string> ResolveWorldTransforms(c
 // Components are runtime data in this slice; scene JSON remains backward-compatible.
 std::expected<std::vector<int>, std::string> ResolveComponents(
     const Scene& scene, std::span<const Component> components, int owner);
+// WHY return the explicit ID: callers can retain it while the store grows or is reordered.
+std::expected<int, std::string> AttachComponent(ComponentStore& store, const Scene& scene,
+                                                Component component);
+std::expected<Component, std::string> LookupComponent(const ComponentStore& store, int id);
+// WHY sort IDs: lookup order is stable even if the owning storage is reordered.
+std::expected<std::vector<int>, std::string> LookupComponents(const ComponentStore& store,
+                                                              int owner);
 }  // namespace clank::m5
