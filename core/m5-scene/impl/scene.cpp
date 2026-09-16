@@ -1,5 +1,6 @@
 #include "m5/scene.hpp"
 
+#include <algorithm>
 #include <charconv>
 #include <cmath>
 #include <cstdio>
@@ -317,6 +318,39 @@ std::expected<std::vector<int>, std::string> ResolveComponents(
         return std::unexpected("duplicate component id " + std::to_string(component.id));
     if (component.owner == owner) ids.push_back(component.id);
   }
+  return ids;
+}
+
+std::expected<int, std::string> AttachComponent(ComponentStore& store, const Scene& scene,
+                                                Component component) {
+  auto find_entity = [&](int id) {
+    for (const Entity& entity : scene.entities)
+      if (entity.id == id) return true;
+    return false;
+  };
+  if (component.type.empty()) return std::unexpected("empty component type");
+  if (!find_entity(component.owner))
+    return std::unexpected("missing component owner " + std::to_string(component.owner));
+  for (const Component& existing : store.components)
+    if (existing.id == component.id)
+      return std::unexpected("duplicate component id " + std::to_string(component.id));
+  const int id = component.id;
+  store.components.push_back(std::move(component));
+  return id;
+}
+
+std::expected<Component, std::string> LookupComponent(const ComponentStore& store, int id) {
+  for (const Component& component : store.components)
+    if (component.id == id) return component;
+  return std::unexpected("missing component id " + std::to_string(id));
+}
+
+std::expected<std::vector<int>, std::string> LookupComponents(const ComponentStore& store,
+                                                              int owner) {
+  std::vector<int> ids;
+  for (const Component& component : store.components)
+    if (component.owner == owner) ids.push_back(component.id);
+  std::sort(ids.begin(), ids.end());
   return ids;
 }
 
