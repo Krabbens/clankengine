@@ -1,0 +1,13 @@
+{
+  "module": "m2",
+  "agent": "agent-main",
+  "branch": "a/m2-shot-stale-cache",
+  "started_utc": "2026-09-16T02:52:25Z",
+  "heartbeat_utc": "2026-09-16T02:52:25Z",
+  "ttl_min": 30,
+  "intent": "drop stale pre-existing shot before TakeScreenshot",
+  "paths": [
+    "core/m2-render/"
+  ],
+  "exception": null
+}

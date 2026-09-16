@@ -2,3 +2,6 @@ build/
 CMakeFiles/
 *.o
 .DS_Store
+# WHY: windowed runs save basename(file) to cwd before m2 moves it (raylib
+# strips directories); stray shots must never look committable.
+clank_frame*.png
