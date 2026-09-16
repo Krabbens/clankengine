@@ -3,7 +3,7 @@
   "agent": "codex",
   "branch": "a/m8-hierarchy-sample",
   "started_utc": "2026-09-16T20:12:34Z",
-  "heartbeat_utc": "2026-09-16T23:01:10Z",
+  "heartbeat_utc": "2026-09-16T23:18:05Z",
   "ttl_min": 30,
   "intent": "Prove parent-linked scene transforms in a headless sample",
   "paths": [
