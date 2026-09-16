@@ -4,6 +4,7 @@
 #include <charconv>
 #include <fstream>
 #include <sstream>
+#include <utility>
 
 namespace clank::m6 {
 namespace {
@@ -75,6 +76,12 @@ bool ParseFrame(const std::string& token, int& frame) {
   const auto [end, error] = std::from_chars(token.data(), token.data() + token.size(), frame);
   return error == std::errc() && end == token.data() + token.size() && frame >= 0;
 }
+
+const ActionBinding* FindBinding(const ActionMap& map, std::string_view name) {
+  for (const auto& binding : map.bindings)
+    if (binding.name == name) return &binding;
+  return nullptr;
+}
 }  // namespace
 void Recorder::Push(InputEvent e) { events.push_back(e); }
 void Recorder::Clear() { events.clear(); }
@@ -130,5 +137,28 @@ bool Playback::IsDown(int frame, Key key) const {
     found = true;
   }
   return down;
+}
+
+std::expected<void, std::string> Bind(ActionMap& map, std::string name, Key key) {
+  if (name.empty()) return std::unexpected("empty action name");
+  if (!ValidKey(key)) return std::unexpected("bad action key");
+  if (FindBinding(map, name)) return std::unexpected("duplicate action name: " + name);
+  for (const auto& binding : map.bindings)
+    if (binding.key == key) return std::unexpected("binding conflict for key");
+  map.bindings.push_back({std::move(name), key});
+  return {};
+}
+
+std::expected<Key, std::string> Lookup(const ActionMap& map, std::string_view name) {
+  const auto* binding = FindBinding(map, name);
+  if (!binding) return std::unexpected("unknown action: " + std::string(name));
+  return binding->key;
+}
+
+std::expected<bool, std::string> IsDown(const ActionMap& map, const Playback& playback, int frame,
+                                        std::string_view name) {
+  auto key = Lookup(map, name);
+  if (!key) return std::unexpected(key.error());
+  return playback.IsDown(frame, *key);
 }
 }  // namespace clank::m6
