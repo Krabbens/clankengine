@@ -1,0 +1,15 @@
+{
+  "module": "m8",
+  "agent": "agent-main",
+  "branch": "a/m8-zelda-windowed-golden",
+  "started_utc": "2026-09-16T16:48:44Z",
+  "heartbeat_utc": "2026-09-16T16:48:44Z",
+  "ttl_min": 30,
+  "intent": "Cover Zelda with real renderer pixels in CI",
+  "paths": [
+    "examples/",
+    "test/",
+    "spec/"
+  ],
+  "exception": null
+}
