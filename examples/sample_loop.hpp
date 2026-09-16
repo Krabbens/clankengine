@@ -51,6 +51,7 @@ template <class State>
 int Run(int argc, char** argv, const Config& cfg,
         std::function<std::unique_ptr<State>(int seed)> make,
         std::function<void(State&, const Context&, int frame, double dt)> step,
+        std::function<void(State&, const Context&, int frame, double dt)> physics,
         std::function<void(const State&, clank::m2::Renderer&)> draw,
         std::function<clank::m5::Scene(const State&, int seed)> scene) {
   if (argc == 2 && std::string(argv[1]) == "--help") {
@@ -79,6 +80,7 @@ int Run(int argc, char** argv, const Config& cfg,
   clank::m1::Stepper stepper(1.0 / 60.0);
   const int limit = flags->shot_after >= 0 ? flags->shot_after : flags->headless ? 240 : -1;
   std::vector<double> timings;
+  std::vector<double> physics_timings;
   std::vector<double> draw_timings;
   std::vector<double> frame_timings;
   std::vector<double> draw2d_counts;
@@ -86,10 +88,17 @@ int Run(int argc, char** argv, const Config& cfg,
   auto update = [&](clank::m1::Frame f, double dt) {
     const auto start = std::chrono::steady_clock::now();
     step(*state, ctx, f.number, dt);
-    if (limit >= 0)
+    const auto physics_start = std::chrono::steady_clock::now();
+    if (physics) physics(*state, ctx, f.number, dt);
+    if (limit >= 0) {
       timings.push_back(
           std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start)
               .count());
+      physics_timings.push_back(physics ? std::chrono::duration<double, std::milli>(
+                                              std::chrono::steady_clock::now() - physics_start)
+                                              .count()
+                                        : 0.0);
+    }
   };
   int result = 0;
   while (!clank::m1::ShouldClose()) {
@@ -156,6 +165,7 @@ int Run(int argc, char** argv, const Config& cfg,
   }
   if (!timings.empty()) {
     std::sort(timings.begin(), timings.end());
+    std::sort(physics_timings.begin(), physics_timings.end());
     std::sort(draw_timings.begin(), draw_timings.end());
     std::sort(frame_timings.begin(), frame_timings.end());
     std::sort(draw2d_counts.begin(), draw2d_counts.end());
@@ -163,12 +173,14 @@ int Run(int argc, char** argv, const Config& cfg,
     auto p = [&](const std::vector<double>& v, double q) {
       return v[static_cast<size_t>((v.size() - 1) * q)];
     };
-    // WHY one line: agents scrape a single stderr row per run (update = sim+physics step).
+    // WHY one line: agents scrape a single stderr row per run; physics is isolated when present.
     std::fprintf(stderr,
                  "%s: frames=%d update_ms p50=%.4f p95=%.4f p99=%.4f "
+                 "physics_ms p50=%.4f p95=%.4f p99=%.4f "
                  "draw_ms p50=%.4f p95=%.4f p99=%.4f frame_ms p50=%.4f p95=%.4f p99=%.4f "
                  "draw2d p50=%.0f p95=%.0f draw3d p50=%.0f p95=%.0f\n",
                  cfg.name, stepper.next(), p(timings, .50), p(timings, .95), p(timings, .99),
+                 p(physics_timings, .50), p(physics_timings, .95), p(physics_timings, .99),
                  p(draw_timings, .50), p(draw_timings, .95), p(draw_timings, .99),
                  p(frame_timings, .50), p(frame_timings, .95), p(frame_timings, .99),
                  p(draw2d_counts, .50), p(draw2d_counts, .95), p(draw3d_counts, .50),

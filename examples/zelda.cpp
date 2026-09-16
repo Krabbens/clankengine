@@ -425,6 +425,6 @@ int main(int argc, char** argv) {
         prev_restart = restart;
         prev_interact = interact;
       },
-      [](const zelda::Game& game, clank::m2::Renderer& renderer) { game.Draw(renderer); },
+      {}, [](const zelda::Game& game, clank::m2::Renderer& renderer) { game.Draw(renderer); },
       [](const zelda::Game& game, int seed) { return game.Scene(seed); });
 }

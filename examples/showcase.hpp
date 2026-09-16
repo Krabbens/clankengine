@@ -30,8 +30,10 @@ int Run(int argc, char** argv, const char* name, const char* title, const char* 
                              -5.0f, 5.0f);
         const bool drop = ctx.isDown(frame, clank::m6::Key::Space, KEY_SPACE);
         if (drop && !previous_drop) demo.Drop(emitter);
-        demo.Step(static_cast<float>(dt));
         previous_drop = drop;
+      },
+      [&](Demo& demo, const sample_loop::Context&, int, double dt) {
+        demo.Step(static_cast<float>(dt));
       },
       [&](const Demo& demo, clank::m2::Renderer& renderer) { demo.Draw(emitter, renderer); },
       [&](const Demo& demo, int seed) { return demo.Scene(seed, emitter); });

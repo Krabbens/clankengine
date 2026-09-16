@@ -25,6 +25,8 @@ with tempfile.TemporaryDirectory() as temp:
             command += ["--replay", replay]
         result = subprocess.run(command, cwd=root, capture_output=True, text=True, check=True)
         assert result.stdout.splitlines() == [f"{name}_frame{frames}.png", "scene.json"]
+        if frames > 0:
+            assert "physics_ms p50=" in result.stderr
         png = (root / f"{name}_frame{frames}.png").read_bytes()
         assert png.startswith(b"\x89PNG\r\n\x1a\n")
         assert int.from_bytes(png[16:20], "big") == 1280
