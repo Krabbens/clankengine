@@ -12,8 +12,9 @@ int main(int argc, char** argv) {
       actual.width * 9 != actual.height * 16 || golden.width * 9 != golden.height * 16)
     return 1;
   // WHY: macOS captures Retina pixels; Linux captures logical window pixels.
-  ImageResize(&actual, 1280, 720);
-  ImageResize(&golden, 1280, 720);
+  // Nearest sampling preserves the flat palette; filtering invents edge colors.
+  ImageResizeNN(&actual, 1280, 720);
+  ImageResizeNN(&golden, 1280, 720);
   Color* a = LoadImageColors(actual);
   Color* b = LoadImageColors(golden);
   const int pixels = actual.width * actual.height;

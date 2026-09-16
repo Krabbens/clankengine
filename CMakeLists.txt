@@ -81,6 +81,9 @@ if(BUILD_TESTING)
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
   add_executable(showcase-pixels test/showcase_pixels.cpp)
   target_link_libraries(showcase-pixels PRIVATE raylib clank_warnings)
+  add_test(NAME showcase-retina-golden COMMAND showcase-pixels
+    ${CMAKE_SOURCE_DIR}/test/golden/pegboard_linux_frame120.png
+    ${CMAKE_SOURCE_DIR}/test/golden/pegboard_frame120.png)
   foreach(sample pegboard marble_tray)
     add_test(NAME ${sample}-replay COMMAND ${Python3_EXECUTABLE}
       ${CMAKE_SOURCE_DIR}/test/showcase_test.py $<TARGET_FILE:${sample}>
