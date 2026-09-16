@@ -21,6 +21,8 @@ constexpr float kEnemySpeed = 1.6f;
 constexpr float kWanderSpeed = 0.8f;
 constexpr float kExitX = 5.8f;
 constexpr float kExitZ = -3.8f;
+constexpr int kEnemyCount = 5;
+constexpr int kRupeeCount = 8;
 
 struct Wall {
   float cx = 0;
@@ -91,8 +93,8 @@ struct Game {
   float hp = 5;
   int rupees = 0;
   int status = 0;  // 0 playing, 1 won, 2 dead
-  Enemy enemies[3]{};
-  Rupee gems[5]{};
+  Enemy enemies[kEnemyCount]{};
+  Rupee gems[kRupeeCount]{};
   Particle particles[32]{};
   int next_particle = 0;
   clank::m0::Rng rng{};
@@ -138,15 +140,15 @@ struct Game {
     for (auto& p : particles) p = {};
     player_animation.frame = 0;
     player_animation.elapsed = 0;
-    const float bx[5] = {-3.0f, 3.0f, 0.0f, -4.0f, 4.0f};
-    const float bz[5] = {3.0f, 3.0f, 0.0f, -3.0f, 2.0f};
-    for (int i = 0; i < 5; ++i) {
+    const float bx[kRupeeCount] = {-3.0f, 3.0f, 0.0f, -4.0f, 4.0f, -5.2f, -5.2f, 5.2f};
+    const float bz[kRupeeCount] = {3.0f, 3.0f, 0.0f, -3.0f, 2.0f, -3.7f, 0.0f, 3.7f};
+    for (int i = 0; i < kRupeeCount; ++i) {
       gems[i].x = bx[i] + static_cast<float>(clank::m0::NextFloat01(rng)) * 0.8f - 0.4f;
       gems[i].z = bz[i] + static_cast<float>(clank::m0::NextFloat01(rng)) * 0.8f - 0.4f;
     }
-    const float ex[3] = {0.0f, 0.0f, 3.0f};
-    const float ez[3] = {2.5f, -2.5f, 0.0f};
-    for (int i = 0; i < 3; ++i) {
+    const float ex[kEnemyCount] = {0.0f, 0.0f, 3.0f, -4.0f, 4.0f};
+    const float ez[kEnemyCount] = {2.5f, -2.5f, 0.0f, 0.5f, -3.2f};
+    for (int i = 0; i < kEnemyCount; ++i) {
       enemies[i].x = ex[i] + static_cast<float>(clank::m0::NextFloat01(rng)) * 1.0f - 0.5f;
       enemies[i].z = ez[i] + static_cast<float>(clank::m0::NextFloat01(rng)) * 1.0f - 0.5f;
       const float a = static_cast<float>(clank::m0::NextFloat01(rng)) * 6.2831853f;
@@ -282,7 +284,7 @@ struct Game {
         clank::m2::PlaySfx(audio, pickup);
       }
     }
-    if (status == 0 && rupees >= 5 && interact_edge) {
+    if (status == 0 && rupees >= kRupeeCount && interact_edge) {
       const float dx = kExitX - px;
       const float dz = kExitZ - pz;
       // WHY inside status==0: the outer guard makes this edge-triggered, so the fanfare fires once.
@@ -317,7 +319,7 @@ struct Game {
       m2::DrawCube(renderer, w.cx, 0.5f, w.cz, w.hx * 2, 1.0f, w.hz * 2, {96, 110, 128, 255});
       m2::DrawCubeWires(renderer, w.cx, 0.5f, w.cz, w.hx * 2, 1.0f, w.hz * 2, {160, 180, 200, 255});
     }
-    const bool open = rupees >= 5;
+    const bool open = rupees >= kRupeeCount;
     m2::DrawCylinder(renderer, kExitX, 0.05f, kExitZ, 0.7f, 0.7f, 0.1f, 24,
                      open ? m2::Color{255, 210, 90, 255} : m2::Color{60, 70, 90, 255});
     m2::DrawCylinderWires(renderer, kExitX, 0.05f, kExitZ, 0.7f, 0.7f, 0.1f, 24,
@@ -352,13 +354,14 @@ struct Game {
     m2::EndMode3D(renderer);
     m2::DrawText(renderer, "03 / ZELDA", 44, 146, 20, {226, 235, 244, 255});
     m2::DrawText(renderer,
-                 TextFormat("HP %.0f/5   RUPEE %d/5   %s", static_cast<double>(hp), rupees,
+                 TextFormat("HP %.0f/5   RUPEE %d/%d   %s", static_cast<double>(hp), rupees,
+                            kRupeeCount,
                             status == 1   ? "WIN!"
                             : status == 2 ? "DEAD"
                             : open        ? "EXIT OPEN"
                                           : ""),
                  44, 184, 18, {135, 158, 181, 255});
-    m2::DrawText(renderer, "Find 5 rupees, reach gold pad", 44, 210, 18, {135, 158, 181, 255});
+    m2::DrawText(renderer, "Find 8 rupees, reach gold pad", 44, 210, 18, {135, 158, 181, 255});
     m2::DrawText(renderer, "3D TOP-DOWN", 1000, 146, 20, {70, 218, 195, 255});
     m2::DrawText(renderer, "Arrows/WASD move, Space sword", 1000, 184, 18, {135, 158, 181, 255});
   }
@@ -387,7 +390,7 @@ struct Game {
     return s;
   }
 
-  bool open() const { return rupees >= 5; }
+  bool open() const { return rupees >= kRupeeCount; }
 };
 }  // namespace zelda
 

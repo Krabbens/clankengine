@@ -1,0 +1,15 @@
+{
+  "module": "m8",
+  "agent": "agent-main",
+  "branch": "a/m8-zelda-depth",
+  "started_utc": "2026-09-16T17:09:41Z",
+  "heartbeat_utc": "2026-09-16T17:09:41Z",
+  "ttl_min": 30,
+  "intent": "Extend Zelda into a longer multi-minute collectible run",
+  "paths": [
+    "examples/",
+    "test/",
+    "spec/"
+  ],
+  "exception": null
+}

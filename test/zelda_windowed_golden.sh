@@ -22,9 +22,9 @@ else
     --replay "$replay" --seed 42
 fi
 
-cp "zelda_frame${frame}.png" /tmp/zelda_windowed_frame600.png
+cp "zelda_frame${frame}.png" "/tmp/zelda_windowed_frame${frame}.png"
 if [ ! -f "$golden" ]; then
-  echo "zelda-windowed-golden: missing golden $golden (inspect /tmp/zelda_windowed_frame600.png and commit it)"
+  echo "zelda-windowed-golden: missing golden $golden (inspect /tmp/zelda_windowed_frame${frame}.png and commit it)"
   exit 1
 fi
 "$compare" "zelda_frame${frame}.png" "$golden"

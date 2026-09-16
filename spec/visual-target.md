@@ -25,7 +25,7 @@ path for GPU measurements:
 
 ```sh
 CLANK_WINDOWED_TEST=1 ctest --test-dir build --output-on-failure
-xvfb-run -a ./build/zelda --shot-after 600 \
+xvfb-run -a ./build/zelda --shot-after 1080 \
   --replay examples/replays/zelda_win.clk --dump-scene /tmp/zelda.json --seed 42
 ```
 
