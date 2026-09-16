@@ -1,0 +1,13 @@
+{
+  "module": "m1",
+  "agent": "agent-zelda",
+  "branch": "a/m1-drop-runwindowed",
+  "started_utc": "2026-09-16T04:39:47Z",
+  "heartbeat_utc": "2026-09-16T04:40:11Z",
+  "ttl_min": 30,
+  "intent": "",
+  "paths": [
+    "core/m1-loop/"
+  ],
+  "exception": null
+}
