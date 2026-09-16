@@ -46,9 +46,5 @@ int main() {
   for (int i = 0; i < 4; ++i) {
     if (clank::m0::NextU64(a) != clank::m0::NextU64(b)) return Fail("rng-determinism");
   }
-
-  clank::m0::Clock c = clank::m0::Construct(1.0 / 60.0);
-  if (clank::m0::Advance(c, 1.0) != 60) return Fail("clock-steps");
-  if (clank::m0::StepCount(c) != 60) return Fail("clock-count");
   return 0;
 }

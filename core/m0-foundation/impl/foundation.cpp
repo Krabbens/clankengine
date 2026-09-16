@@ -25,26 +25,6 @@ double NextFloat01(Rng& rng) {
   return static_cast<double>(NextU64(rng) >> 11) * (1.0 / 9007199254740992.0);
 }
 
-Clock Construct(double dt) {
-  Clock c;
-  c.dt = dt;
-  return c;
-}
-
-int Advance(Clock& c, double elapsed) {
-  // WHY epsilon: 60*(1/60) rounds above 1.0 in binary; without it step 60 is lost.
-  if (c.dt <= 0.0 || elapsed <= 0.0) return 0;
-  c.acc += elapsed;
-  int n = static_cast<int>((c.acc + 1e-9) / c.dt);
-  if (n <= 0) return 0;
-  c.acc -= static_cast<double>(n) * c.dt;
-  if (c.acc < 0.0) c.acc = 0.0;
-  c.steps += static_cast<uint64_t>(n);
-  return n;
-}
-
-uint64_t StepCount(const Clock& c) { return c.steps; }
-
 namespace {
 int ParseIntOr(const char* s, int fallback) {
   // WHY from_chars: stoi throws; the cold CLI path keeps the no-exceptions rule simple.

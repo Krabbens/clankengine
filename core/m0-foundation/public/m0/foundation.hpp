@@ -24,16 +24,6 @@ void Seed(Rng& rng, uint64_t seed);
 uint64_t NextU64(Rng& rng);
 double NextFloat01(Rng& rng);
 
-// WHY manual stepper: fixed dt + seeded RNG is what makes headless replay exact.
-struct Clock {
-  double dt = 1.0 / 60.0;
-  double acc = 0.0;
-  uint64_t steps = 0;
-};
-Clock Construct(double dt);
-int Advance(Clock& clock, double elapsed);
-uint64_t StepCount(const Clock& clock);
-
 // WHY mirror src/main.cpp defaults: flags are the agent observability contract.
 // WHY strict: any unknown flag (incl. --help) is an error, matching the stub.
 struct Flags {
