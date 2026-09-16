@@ -12,12 +12,12 @@ jobs:
         include:
           - os: ubuntu-latest
             compiler: clang
-            cc: clang
-            cxx: clang++
+            cc: clang-18
+            cxx: clang++-18
           - os: ubuntu-latest
             compiler: gcc
-            cc: gcc
-            cxx: g++
+            cc: gcc-13
+            cxx: g++-13
     runs-on: ${{ matrix.os }}
     env:
       CC: ${{ matrix.cc }}
@@ -28,7 +28,7 @@ jobs:
       - name: Install Ninja + raylib Linux deps (GLFW/X11)
         # WHY here, not in CMake: system display libs cannot come from FetchContent.
         run: >
-          sudo apt-get update && sudo apt-get install -y ninja-build
+          sudo apt-get update && sudo apt-get install -y ninja-build clang-18 gcc-13 g++-13
           libasound2-dev libx11-dev libxrandr-dev libxi-dev
           libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev
           libwayland-dev libxkbcommon-dev xvfb
