@@ -1,0 +1,13 @@
+{
+  "module": "m0",
+  "agent": "agent-main",
+  "branch": "a/m0-ndebug-selftest",
+  "started_utc": "2026-09-16T01:28:32Z",
+  "heartbeat_utc": "2026-09-16T01:28:32Z",
+  "ttl_min": 30,
+  "intent": "NDEBUG-safe selftest (CI builds Release)",
+  "paths": [
+    "core/m0-foundation/"
+  ],
+  "exception": null
+}
