@@ -1,0 +1,13 @@
+{
+  "module": "m2",
+  "agent": "agent-m2b",
+  "branch": "a/m2-render-backend",
+  "started_utc": "2026-09-16T01:00:01Z",
+  "heartbeat_utc": "2026-09-16T01:00:01Z",
+  "ttl_min": 30,
+  "intent": "raylib 5.5 backend, headless-safe",
+  "paths": [
+    "core/m2-render/"
+  ],
+  "exception": null
+}
