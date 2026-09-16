@@ -1,7 +1,7 @@
-#include "m2/render.hpp"
-
 #include <cstdio>
 #include <fstream>
+
+#include "m2/render.hpp"
 
 int main() {
   clank::m2::Renderer r = clank::m2::Create();
@@ -24,7 +24,27 @@ int main() {
   if (!clank::m2::TakeScreenshot(r, path)) return 1;
   std::ifstream in(path, std::ios::binary);
   if (!in) return 1;
+  // Clear starts a new frame in the log.
+  clank::m2::Clear(r, white);
+  if (clank::m2::DrawLogCount(r) != 0) return 1;
+  clank::m2::DrawRect(r, 0, 0, 1, 1, white);
+  if (clank::m2::DrawLogCount(r) != 1) return 1;
+  // Identical stubs compare equal; bad inputs are errors, not false.
+  const std::string shot_b = "/tmp/m2-selftest-shot-b.png";
+  if (!clank::m2::TakeScreenshot(r, shot_b)) return 1;
+  auto same = clank::m2::CompareImages(path, shot_b, 0.0);
+  if (!same || !*same) return 1;
+  if (clank::m2::CompareImages(path, "/tmp/m2-selftest-nope.png", 1.0)) return 1;
+  const std::string not_png = "/tmp/m2-selftest-notpng.txt";
+  {
+    std::ofstream o(not_png);
+    o << "nope";
+  }
+  if (clank::m2::CompareImages(path, not_png, 1.0)) return 1;
+  if (clank::m2::CompareImages(path, shot_b, -0.5)) return 1;
   std::remove(path.c_str());
+  std::remove(shot_b.c_str());
+  std::remove(not_png.c_str());
   clank::m2::Destroy(r);
   return r.valid ? 1 : 0;
 }
