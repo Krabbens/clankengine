@@ -12,7 +12,7 @@ struct Color {
   unsigned char a = 255;
 };
 
-enum class DrawKind { Rect, Circle, Text };
+enum class DrawKind { Rect, Circle, Triangle, Text };
 
 struct DrawEntry {
   DrawKind kind = DrawKind::Rect;
@@ -20,6 +20,8 @@ struct DrawEntry {
   float y = 0;
   float w = 0;
   float h = 0;
+  // WHY second/third vertex live here: triangles reuse one entry instead of three rect-shaped rows.
+  float x2 = 0, y2 = 0, x3 = 0, y3 = 0;
   std::string text;
   Color color{};
 };
@@ -36,6 +38,7 @@ void End(Renderer& r);
 void Clear(Renderer& r, Color c);
 void DrawRect(Renderer& r, float x, float y, float w, float h, Color c);
 void DrawCircle(Renderer& r, float x, float y, float radius, Color c);
+void DrawTriangle(Renderer& r, float x1, float y1, float x2, float y2, float x3, float y3, Color c);
 void DrawText(Renderer& r, const std::string& text, float x, float y, float size, Color c);
 
 // WHY perspective-only: both 3D samples use a fixed perspective camera; ortho can extend this.

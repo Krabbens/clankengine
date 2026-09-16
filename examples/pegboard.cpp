@@ -45,30 +45,34 @@ struct Pegboard {
     items.push_back({physics::CreateBody(world, d), d});
   }
   void Step(float dt) { physics::Step(world, dt); }
-  // WHY renderer param unused: 2D pegs draw raw raylib; the signature matches the 3D demos.
-  void Draw(float emitter, clank::m2::Renderer&) const {
-    DrawRectangle(318, 116, 644, 536, {18, 30, 44, 255});
+  void Draw(float emitter, clank::m2::Renderer& renderer) const {
+    namespace m2 = clank::m2;
+    // WHY local palette: m2::Color is stdlib-only, so raylib showcase colors convert at the call.
+    const m2::Color pal[3] = {{70, 218, 195, 255}, {255, 186, 99, 255}, {139, 151, 255, 255}};
+    const m2::Color ink{226, 235, 244, 255};
+    const m2::Color muted{135, 158, 181, 255};
+    m2::DrawRect(renderer, 318, 116, 644, 536, {18, 30, 44, 255});
     for (size_t i = 0; i < items.size(); ++i) {
       const auto& [body, d] = items[i];
       const auto p = physics::GetPosition(body);
       const float x = 640 + p.x * 42, y = 638 - p.y * 42;
       if (y < 115) continue;
-      Color color =
-          d.type == physics::BodyType::Dynamic ? showcase::colors[i % 3] : Color{78, 103, 128, 255};
+      const m2::Color color =
+          d.type == physics::BodyType::Dynamic ? pal[i % 3] : m2::Color{78, 103, 128, 255};
       if (d.shape == physics::ShapeKind::Circle) {
-        DrawCircleV({x, y}, d.circle_r * 42, color);
-        if (d.type == physics::BodyType::Dynamic) DrawCircleV({x - 3, y - 3}, 3, showcase::ink);
+        m2::DrawCircle(renderer, x, y, d.circle_r * 42, color);
+        if (d.type == physics::BodyType::Dynamic) m2::DrawCircle(renderer, x - 3, y - 3, 3, ink);
       } else
-        DrawRectangleRec({x - d.box_hx * 42, y - d.box_hy * 42, d.box_hx * 84, d.box_hy * 84},
-                         color);
+        m2::DrawRect(renderer, x - d.box_hx * 42, y - d.box_hy * 42, d.box_hx * 84, d.box_hy * 84,
+                     color);
     }
-    DrawTriangle({640 + emitter * 42, 152}, {650 + emitter * 42, 132}, {630 + emitter * 42, 132},
-                 showcase::colors[0]);
-    DrawText("01 / GRAVITY", 44, 180, 20, showcase::ink);
-    DrawText("24 seeded balls\nStatic circle pegs\nBox dividers\nContact + friction", 44, 218, 18,
-             showcase::muted);
-    DrawText("BOX2D 3.1", 1000, 180, 20, showcase::colors[1]);
-    DrawText("Same seed.\nSame input.\nSame simulation.", 1000, 218, 18, showcase::muted);
+    m2::DrawTriangle(renderer, 640 + emitter * 42, 152, 650 + emitter * 42, 132, 630 + emitter * 42,
+                     132, pal[0]);
+    m2::DrawText(renderer, "01 / GRAVITY", 44, 180, 20, ink);
+    m2::DrawText(renderer, "24 seeded balls\nStatic circle pegs\nBox dividers\nContact + friction",
+                 44, 218, 18, muted);
+    m2::DrawText(renderer, "BOX2D 3.1", 1000, 180, 20, pal[1]);
+    m2::DrawText(renderer, "Same seed.\nSame input.\nSame simulation.", 1000, 218, 18, muted);
   }
   clank::m5::Scene Scene(int seed, float emitter) const {
     clank::m5::Scene scene{seed, {}};
