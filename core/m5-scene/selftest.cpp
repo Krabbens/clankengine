@@ -44,6 +44,14 @@ int main() {
   if (clank::m5::LoadJson(
           "{\"version\":0,\"seed\":1,\"entities\":[{\"id\":1,\"name\":\"\\ud800\"}]}"))
     return 1;
+  if (clank::m5::LoadJson("{\"version\":0,\"seed\":1.5,\"entities\":[]}")) return 1;
+  if (clank::m5::LoadJson("{\"version\":0,\"seed\":2147483648,\"entities\":[]}")) return 1;
+  if (clank::m5::LoadJson("{\"version\":0,\"seed\":1,\"entities\":[{\"id\":1.5,\"name\":\"a\","
+                          "\"x\":0,\"y\":0,\"angle\":0,\"sx\":1,\"sy\":1}]}"))
+    return 1;
+  if (clank::m5::LoadJson("{\"version\":0,\"seed\":1,\"entities\":[{\"id\":1,\"name\":\"a\","
+                          "\"x\":1e9999,\"y\":0,\"angle\":0,\"sx\":1,\"sy\":1}]}"))
+    return 1;
   std::printf("m5-selftest ok\n");
   return 0;
 }

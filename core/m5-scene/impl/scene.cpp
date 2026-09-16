@@ -1,5 +1,7 @@
 #include "m5/scene.hpp"
 
+#include <charconv>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -57,16 +59,19 @@ bool TakeNum(Cur& c, float& v) {
   SkipWs(c);
   char* e = nullptr;
   float x = std::strtof(c.p, &e);
-  if (e == c.p || e > c.end) return false;
+  if (e == c.p || e > c.end || !std::isfinite(x)) return false;
   v = x;
   c.p = e;
   return true;
 }
-// WHY: ints reuse the float path so there is one number parser, not two.
+// WHY: integer fields reject fractions and overflow instead of truncating through float.
 bool TakeInt(Cur& c, int& v) {
-  float f = 0;
-  if (!TakeNum(c, f)) return false;
-  v = static_cast<int>(f);
+  SkipWs(c);
+  int x = 0;
+  const auto [e, error] = std::from_chars(c.p, c.end, x);
+  if (e == c.p || error != std::errc()) return false;
+  v = x;
+  c.p = e;
   return true;
 }
 bool TakeHex4(Cur& c, unsigned& v) {
