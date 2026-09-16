@@ -1,0 +1,13 @@
+{
+  "module": "m2",
+  "agent": "agent-main",
+  "branch": "a/m2-assets-animation",
+  "started_utc": "2026-09-16T15:59:10Z",
+  "heartbeat_utc": "2026-09-16T16:02:35Z",
+  "ttl_min": 30,
+  "intent": "Add explicit model, material, and animation resources to m2",
+  "paths": [
+    "core/m2-render/"
+  ],
+  "exception": null
+}

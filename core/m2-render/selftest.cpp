@@ -80,6 +80,21 @@ int main() {
   clank::m2::UnloadTexture(checker);
   clank::m2::UnloadTexture(bad_tex);
   if (checker.id >= 0) return 1;
+  clank::m2::Model model = clank::m2::LoadModel("", {2, 3, 4});
+  clank::m2::Material material = clank::m2::CreateMaterial({240, 180, 80, 255}, 2);
+  clank::m2::Animation animation = clank::m2::CreateAnimation(3, 2);
+  clank::m2::AdvanceAnimation(animation, 0.5f);
+  if (model.id < 0 || material.id < 0 || material.roughness != 1 || animation.frame != 1) return 1;
+  clank::m2::DrawModel(r, model, {0, 0, 0}, {1, 1, 1}, material, animation);
+  const auto* model_entry = clank::m2::Draw3DLogAt(r, 2);
+  if (!model_entry || model_entry->kind != clank::m2::Draw3DKind::Model ||
+      model_entry->asset != model.id || model_entry->a != 2 || model_entry->b != 3 ||
+      model_entry->c != 4)
+    return 1;
+  clank::m2::UnloadModel(model);
+  clank::m2::UnloadMaterial(material);
+  clank::m2::UnloadAnimation(animation);
+  if (model.id >= 0 || material.id >= 0 || animation.id >= 0) return 1;
   // Rasterized headless frames compare by pixels; bad inputs are errors, not false.
   const std::string shot_b = "/tmp/m2-selftest-shot-b.png";
   if (!clank::m2::TakeScreenshot(r, shot_b)) return 1;
