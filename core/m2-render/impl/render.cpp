@@ -71,16 +71,15 @@ void Clear(Renderer& r, Color c) {
 }
 
 void DrawRect(Renderer& r, float x, float y, float w, float h, Color c) {
-  Push(r, DrawEntry{.kind = DrawKind::Rect,
-                    .x = x, .y = y, .w = w, .h = h, .text = {}, .color = c});
+  Push(r,
+       DrawEntry{.kind = DrawKind::Rect, .x = x, .y = y, .w = w, .h = h, .text = {}, .color = c});
   // WHY: DrawLog is headless truth; mirror to screen only when a window exists.
   // Precondition: ::IsWindowReady() must be true before ::DrawRectangleV().
   if (::IsWindowReady()) ::DrawRectangleV(::Vector2{x, y}, ::Vector2{w, h}, ToRay(c));
 }
 
 void DrawCircle(Renderer& r, float x, float y, float radius, Color c) {
-  Push(r, DrawEntry{.kind = DrawKind::Circle,
-                    .x = x, .y = y, .w = radius, .text = {}, .color = c});
+  Push(r, DrawEntry{.kind = DrawKind::Circle, .x = x, .y = y, .w = radius, .text = {}, .color = c});
   // WHY: keep float center in V variant; skip GPU work headless.
   // Precondition: ::IsWindowReady() must be true before ::DrawCircleV().
   if (::IsWindowReady()) ::DrawCircleV(::Vector2{x, y}, radius, ToRay(c));
