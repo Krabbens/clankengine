@@ -68,7 +68,16 @@ struct DirectionalLight {
 void SetDirectionalLight(Renderer& r, DirectionalLight light);
 void SetColorGrade(Renderer& r, Color tint, float strength);
 
-enum class Draw3DKind { Cube, CubeWires, Sphere, SphereWires, Cylinder, CylinderWires, Shadow };
+enum class Draw3DKind {
+  Cube,
+  CubeWires,
+  Sphere,
+  SphereWires,
+  Cylinder,
+  CylinderWires,
+  Shadow,
+  Model
+};
 
 // WHY one entry: a/b/c read as sizes (cube), radius (sphere) or rTop/rBottom/height (cylinder);
 // n/m read as rings/slices; tex selects a checker texture (-1 keeps the flat color).
@@ -78,6 +87,7 @@ struct Draw3DEntry {
   float a = 0, b = 0, c = 0;
   int n = 0, m = 0;
   int tex = -1;
+  int asset = -1;
   Color color{};
 };
 
@@ -94,6 +104,37 @@ void DrawCylinderWires(Renderer& r, float x, float y, float z, float r_top, floa
                        float height, int slices, Color c);
 // Draw a flat, stylized ground shadow. height is the caster height above the ground.
 void DrawShadow(Renderer& r, float x, float y, float z, float radius, float height, Color c);
+
+struct Model {
+  int id = -1;
+  Vec3 fallback_size{1, 1, 1};
+};
+
+Model LoadModel(const std::string& path, Vec3 fallback_size = {1, 1, 1});
+void UnloadModel(Model& model);
+
+struct Material {
+  int id = -1;
+  Color albedo{255, 255, 255, 255};
+  float roughness = 1;
+};
+
+Material CreateMaterial(Color albedo, float roughness = 1);
+void UnloadMaterial(Material& material);
+
+struct Animation {
+  int id = -1;
+  int frame = 0;
+  int frames = 1;
+  float fps = 1;
+  float elapsed = 0;
+};
+
+Animation CreateAnimation(int frames, float fps);
+void AdvanceAnimation(Animation& animation, float dt);
+void UnloadAnimation(Animation& animation);
+void DrawModel(Renderer& r, Model model, Vec3 position, Vec3 scale, Material material,
+               Animation animation = {});
 [[nodiscard]] std::size_t Draw3DLogCount(const Renderer& r);
 [[nodiscard]] const Draw3DEntry* Draw3DLogAt(const Renderer& r, std::size_t i);
 [[nodiscard]] std::size_t DrawLogCount(const Renderer& r);

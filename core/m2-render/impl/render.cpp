@@ -51,6 +51,29 @@ std::unordered_map<int, Grade>& Grades() {
   return grades;
 }
 
+struct ModelEntry {
+  std::string path;
+  Vec3 fallback_size{1, 1, 1};
+  ::Model gpu{};
+  bool loaded = false;
+};
+std::unordered_map<int, ModelEntry>& Models() {
+  static std::unordered_map<int, ModelEntry> models;
+  return models;
+}
+int& NextModelId() {
+  static int next = 0;
+  return next;
+}
+int& NextMaterialId() {
+  static int next = 0;
+  return next;
+}
+int& NextAnimationId() {
+  static int next = 0;
+  return next;
+}
+
 unsigned char ScaleChannel(unsigned char c, float scale) {
   return static_cast<unsigned char>(std::clamp(std::lround(c * scale), 0L, 255L));
 }
@@ -361,6 +384,83 @@ void DrawShadow(Renderer& r, float x, float y, float z, float radius, float heig
     ::DrawCylinder(::Vector3{sx, y + 0.005f, sz}, radius, radius * 0.65f, 0.01f, 24, ToRay(shaded));
 }
 
+Model LoadModel(const std::string& path, Vec3 fallback_size) {
+  Model model{.id = NextModelId()++, .fallback_size = fallback_size};
+  Models()[model.id] = ModelEntry{.path = path, .fallback_size = fallback_size};
+  return model;
+}
+
+void UnloadModel(Model& model) {
+  if (model.id < 0) return;
+  auto it = Models().find(model.id);
+  if (it != Models().end()) {
+    if (it->second.loaded && ::IsWindowReady()) ::UnloadModel(it->second.gpu);
+    Models().erase(it);
+  }
+  model.id = -1;
+}
+
+Material CreateMaterial(Color albedo, float roughness) {
+  return Material{
+      .id = NextMaterialId()++, .albedo = albedo, .roughness = std::clamp(roughness, 0.0f, 1.0f)};
+}
+
+void UnloadMaterial(Material& material) { material.id = -1; }
+
+Animation CreateAnimation(int frames, float fps) {
+  return Animation{.id = NextAnimationId()++,
+                   .frame = 0,
+                   .frames = std::max(1, frames),
+                   .fps = std::max(0.0f, fps),
+                   .elapsed = 0};
+}
+
+void AdvanceAnimation(Animation& animation, float dt) {
+  if (animation.id < 0 || animation.frames <= 0 || dt <= 0 || animation.fps <= 0) return;
+  animation.elapsed += dt;
+  const float frame_time = 1.0f / animation.fps;
+  while (animation.elapsed >= frame_time) {
+    animation.elapsed -= frame_time;
+    animation.frame = (animation.frame + 1) % animation.frames;
+  }
+}
+
+void UnloadAnimation(Animation& animation) { animation.id = -1; }
+
+void DrawModel(Renderer& r, Model model, Vec3 position, Vec3 scale, Material material,
+               Animation animation) {
+  auto it = Models().find(model.id);
+  if (!r.valid || it == Models().end()) return;
+  const Vec3 size{it->second.fallback_size.x * scale.x, it->second.fallback_size.y * scale.y,
+                  it->second.fallback_size.z * scale.z};
+  const float bob = animation.id >= 0 && animation.frame % 2 != 0 ? 0.03f : 0.0f;
+  Push3D(r, Draw3DEntry{.kind = Draw3DKind::Model,
+                        .x = position.x,
+                        .y = position.y + bob,
+                        .z = position.z,
+                        .a = size.x,
+                        .b = size.y,
+                        .c = size.z,
+                        .asset = model.id,
+                        .color = material.albedo});
+  if (!::IsWindowReady()) return;
+  if (!it->second.loaded) {
+    if (it->second.path.empty()) {
+      const Vec3 s = it->second.fallback_size;
+      it->second.gpu = ::LoadModelFromMesh(::GenMeshCube(std::max(0.01f, std::abs(s.x)),
+                                                         std::max(0.01f, std::abs(s.y)),
+                                                         std::max(0.01f, std::abs(s.z))));
+    } else {
+      it->second.gpu = ::LoadModel(it->second.path.c_str());
+    }
+    it->second.loaded = true;
+  }
+  if (::IsModelValid(it->second.gpu))
+    ::DrawModelEx(it->second.gpu, ::Vector3{position.x, position.y + bob, position.z},
+                  ::Vector3{0, 1, 0}, 0, ::Vector3{scale.x, scale.y, scale.z},
+                  ToRay(LitColor(r, material.albedo)));
+}
+
 std::size_t Draw3DLogCount(const Renderer& r) {
   auto it = Logs3D().find(r.id);
   if (!r.valid || it == Logs3D().end()) return 0;
@@ -438,7 +538,8 @@ std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::st
     const int height = std::max(1, static_cast<int>(std::lround(std::abs(e.c) * 2 * scale)));
     const int radius = std::max(1, static_cast<int>(std::lround(std::abs(e.a) * scale)));
     switch (e.kind) {
-      case Draw3DKind::Cube: {
+      case Draw3DKind::Cube:
+      case Draw3DKind::Model: {
         // WHY world-space pattern: headless has no UV state, so the checker evaluates in X/Z
         // like the projection itself; GPU path does true UV mapping instead (documented split).
         const TexEntry* tex = FindTex(e.tex);
