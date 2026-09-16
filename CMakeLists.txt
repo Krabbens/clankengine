@@ -106,6 +106,13 @@ if(BUILD_TESTING)
   add_test(NAME zelda-win COMMAND ${Python3_EXECUTABLE}
     ${CMAKE_SOURCE_DIR}/test/zelda_win_test.py $<TARGET_FILE:zelda>
     ${CMAKE_SOURCE_DIR}/examples/replays/zelda_win.clk)
+  if(NOT WIN32)
+    add_test(NAME zelda-windowed-golden COMMAND bash
+      ${CMAKE_SOURCE_DIR}/test/zelda_windowed_golden.sh $<TARGET_FILE:zelda>
+      $<TARGET_FILE:showcase-pixels>
+      ${CMAKE_SOURCE_DIR}/test/golden/zelda_frame600.png
+      ${CMAKE_SOURCE_DIR}/examples/replays/zelda_win.clk 600)
+  endif()
   add_test(NAME breakout-game COMMAND ${Python3_EXECUTABLE}
     ${CMAKE_SOURCE_DIR}/test/breakout_test.py $<TARGET_FILE:breakout>
     ${CMAKE_SOURCE_DIR}/examples/replays/drop.clk)
