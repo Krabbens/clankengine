@@ -1,0 +1,15 @@
+{
+  "module": "m8",
+  "agent": "codex",
+  "branch": "a/m8-main-replay",
+  "started_utc": "2026-09-16T05:06:09Z",
+  "heartbeat_utc": "2026-09-16T05:06:09Z",
+  "ttl_min": 30,
+  "intent": "Honor --replay in the core clank observability CLI",
+  "paths": [
+    "examples/",
+    "test/",
+    "spec/"
+  ],
+  "exception": null
+}
