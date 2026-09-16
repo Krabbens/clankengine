@@ -1,20 +1,14 @@
 #pragma once
-// m0-foundation: tiny shared contract for agents (types, log, RNG, clock, flags).
+// m0-foundation: tiny shared contract for agents (types, RNG, flags).
 // WHY one header: a single include keeps the core API surface countable (RISC).
 #include <cstdint>
 #include <expected>
 #include <string>
-#include <string_view>
 
 namespace clank::m0 {
 
 template <typename T>
 using Result = std::expected<T, std::string>;
-
-enum class Level { Info, Warn, Error };
-
-// WHY stderr: logs must never pollute stdout (machine paths live there).
-void Log(Level level, std::string_view msg);
 
 // WHY splitmix64: ~10 lines, u64 state only, bit-identical across platforms.
 struct Rng {
