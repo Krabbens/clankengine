@@ -1,5 +1,5 @@
-// clank app: agent-first game loop on m0 (flags) + m1 (loop) + m2 (render) + m5 (scene) + m6 (input).
-// Logs -> stderr; machine-readable result paths -> stdout.
+// clank app: agent-first game loop on m0 (flags) + m1 (loop) + m2 (render) + m5 (scene) + m6
+// (input). Logs -> stderr; machine-readable result paths -> stdout.
 #include <cstdio>
 #include <fstream>
 #include <string>
