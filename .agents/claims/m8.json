@@ -1,0 +1,15 @@
+{
+  "module": "m8",
+  "agent": "agent-main",
+  "branch": "a/m8-ci-visual-budget",
+  "started_utc": "2026-09-16T16:08:29Z",
+  "heartbeat_utc": "2026-09-16T16:09:12Z",
+  "ttl_min": 30,
+  "intent": "Make compiler matrix select clang and gcc and document visual budget",
+  "paths": [
+    "examples/",
+    "test/",
+    "spec/"
+  ],
+  "exception": null
+}
