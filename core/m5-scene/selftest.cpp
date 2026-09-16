@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdio>
 
 #include "m5/scene.hpp"
@@ -7,8 +8,11 @@ int main() {
   s.entities.push_back({1, "player one", 1.5f, -2.0f, 0.25f, 1.0f, 1.0f});
   s.entities.push_back({2, "hi \"q\" \\ r", 0.0f, 0.5f, -1.0f, 2.0f, 0.5f});
   s.entities.push_back({3, "line\nbreak", 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.5f});
+  s.entities.push_back({4, "child", 2.0f, 0.0f, 0.5f, 0.5f, 1.0f, 0.25f, 1});
   std::string j = clank::m5::DumpJson(s);
-  if (j.find("\"z\":1.5") == std::string::npos) return 1;
+  if (j.find("\"z\":1.5") == std::string::npos ||
+      j.find("\"parent\":1") == std::string::npos)
+    return 1;
   auto back = clank::m5::LoadJson(j);
   if (!back) {
     std::fprintf(stderr, "load: %s\n", back.error().c_str());
@@ -19,11 +23,32 @@ int main() {
     const auto& a = s.entities[i];
     const auto& b = back->entities[i];
     if (a.id != b.id || a.name != b.name || a.x != b.x || a.y != b.y || a.angle != b.angle ||
-        a.sx != b.sx || a.sy != b.sy || a.z != b.z) {
+        a.sx != b.sx || a.sy != b.sy || a.z != b.z || a.parent != b.parent) {
       std::fprintf(stderr, "roundtrip mismatch entity %zu\n", i);
       return 1;
     }
   }
+  clank::m5::Scene tree;
+  tree.entities.push_back({10, "root", 10, 20, 0.5f, 2, 3, 4});
+  tree.entities.push_back({11, "child", 1, 0, 0.25f, 0.5f, 2, 6, 10});
+  tree.entities.push_back({12, "grandchild", 0, 1, 0, 1, 1, 2, 11});
+  auto world = clank::m5::ResolveWorldTransforms(tree);
+  if (!world) return 1;
+  if (std::fabs((*world)[1].x - 11.755165f) > 0.001f ||
+      std::fabs((*world)[1].y - 20.958851f) > 0.001f ||
+      std::fabs((*world)[1].z - 10.0f) > 0.001f ||
+      std::fabs((*world)[2].x - 7.665333f) > 0.001f ||
+      std::fabs((*world)[2].y - 25.348984f) > 0.001f)
+    return 1;
+  auto missing = tree;
+  missing.entities[1].parent = 99;
+  if (clank::m5::ResolveWorldTransforms(missing)) return 1;
+  auto cycle = tree;
+  cycle.entities[0].parent = 12;
+  if (clank::m5::ResolveWorldTransforms(cycle)) return 1;
+  auto duplicate = tree;
+  duplicate.entities[2].id = 11;
+  if (clank::m5::ResolveWorldTransforms(duplicate)) return 1;
   // Any key order, extra whitespace, version 1, \u escapes.
   auto reord = clank::m5::LoadJson(
       "{ \"seed\" : 7 , \"entities\" : [ { \"sy\" : 1 , \"sx\" : 1 , \"angle\" : 0 , "
