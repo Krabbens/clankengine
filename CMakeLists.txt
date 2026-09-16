@@ -74,6 +74,9 @@ foreach(sample pegboard marble_tray zelda breakout)
   target_link_libraries(${sample} PRIVATE m0_foundation m1_loop m2_render
     m5_scene m6_input clank_warnings)
 endforeach()
+add_executable(hierarchy examples/hierarchy.cpp)
+target_link_libraries(hierarchy PRIVATE m0_foundation m1_loop m2_render m5_scene m6_input
+  clank_warnings)
 target_link_libraries(pegboard PRIVATE m3_physics2d)
 target_link_libraries(marble_tray PRIVATE m4_physics3d)
 target_link_libraries(breakout PRIVATE m3_physics2d)
@@ -115,6 +118,9 @@ if(BUILD_TESTING)
   endif()
   add_test(NAME breakout-game COMMAND ${Python3_EXECUTABLE}
     ${CMAKE_SOURCE_DIR}/test/breakout_test.py $<TARGET_FILE:breakout>
+    ${CMAKE_SOURCE_DIR}/examples/replays/drop.clk)
+  add_test(NAME hierarchy-sample COMMAND ${Python3_EXECUTABLE}
+    ${CMAKE_SOURCE_DIR}/test/hierarchy_test.py $<TARGET_FILE:hierarchy>
     ${CMAKE_SOURCE_DIR}/examples/replays/drop.clk)
 endif()
 

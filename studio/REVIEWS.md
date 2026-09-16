@@ -44,3 +44,38 @@ This was an internal adversarial pass, not an independent reviewer.
 - Correction: `WorldTransform` now stores an exact 2D affine basis; JSON load and resolve reject invalid negative parents and invalid scene IDs/links.
 - Evidence: Windows rebuild, `m5-selftest`, focused CTest 4/4, and diff check pass.
 - Result: P1 transform bug closed; sample-level proof and full Windows CTest portability remain open.
+
+## Review: hierarchy sample proof
+
+- Date: 2026-09-16
+- Claim: an agent can observe a real parent-linked scene through dump, pixels, and replay.
+- Audience: engine contributors validating runtime capabilities without an editor.
+- Evidence: `hierarchy-sample` CTest 1/1; 1280x720 headless PNG inspected; dump contains `10 -> 11 -> 12`; repeated replay is byte-identical.
+- Gate: sample uses only the frozen m5 API, supports all standard flags, and has no P0.
+- Verdict: IMPROVE
+- Weighted score: 4.3/5
+- P0 veto: None
+
+### Panel
+
+| Reviewer | Weight | Score 1-5 | Evidence | Main objection | Next action |
+|---|---:|---:|---|---|---|
+| Sample/Runtime Reviewer | 1 | 5 | Three-node arm visibly follows resolved parent transforms; dump/PNG/replay checks pass | No component ownership yet | Keep hierarchy stable and move to components only after the Windows gate is green |
+| QA / Slice Guardian | 1 | 4 | Same replay is byte-identical; driven and plain runs diverge | Full Windows suite still has five harness failures | Run the Windows portability sprint |
+| Technical Designer | 1 | 4 | The sample communicates root -> arm -> tip with minimal code | Labels are absent in headless pixels because text is draw-log-only | Keep node colors/links as the headless proof |
+
+### Clanker pass
+
+This was an internal adversarial pass, not an independent reviewer.
+
+- Strongest claim: the hierarchy is now proven at the same CLI boundary agents use.
+- Strongest objection: the sample proves transforms, not Actor lifecycle or components.
+- Missing evidence: full Windows CTest and a live-window screenshot with text.
+- Adversarial test: run the same replay twice, compare bytes, and compare against an undriven run.
+- Score: 4/5
+- P0: None
+
+### Synthesis
+
+- Decision: accept the proof direction; improve the platform gate before adding components.
+- Next sprint: repair Windows CTest portability in a separate m8 PR.

@@ -36,6 +36,15 @@
   - Next Action: add a headless sample assertion that consumes resolved hierarchy data.
   - Implementation notes: keep root output backward compatible; `z` remains additive height; resolved 2D basis is affine to preserve shear.
   - Test/acceptance notes: affine regression and invalid-parent JSON tests pass; focused suite 4/4 passes; full suite has five unrelated Windows harness failures.
+- `M8-HIERARCHY-SAMPLE-001` — type: proof slice; owner: codex; priority: P0; criticality: P1; effort: S; epic: Unreal-like runtime foundation.
+  - Context: m5 hierarchy was only proven by a module self-test.
+  - Goal: demonstrate parent-linked transforms through a real headless sample using dump, see, and drive.
+  - Dependencies: merged m5 hierarchy contract.
+  - Blocks: component/prefab work until the runtime contract is visible at sample level.
+  - DoD: `hierarchy` builds; dump contains `10 -> 11 -> 12`; repeated replay produces byte-identical JSON/PNG; undriven and driven outputs differ.
+  - Next Action: open the m8 sample PR and pass CI.
+  - Implementation notes: no new engine API; `ResolveWorldTransforms` is consumed directly by the sample.
+  - Test/acceptance notes: Windows focused sample test 1/1 passes; full suite has five pre-existing Windows harness failures.
 
 ### BLOCKED
 

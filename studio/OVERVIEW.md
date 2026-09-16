@@ -7,8 +7,8 @@ through explicit, deterministic slices rather than a large editor framework.
 
 ## Current experiment
 
-`m5-scene-hierarchy`: add stable parent-linked scene entities and deterministic
-world-transform resolution.
+`hierarchy` sample: prove stable parent-linked scene entities and deterministic
+world-transform resolution at the agent-facing sample boundary.
 
 ## Last decision
 
@@ -19,7 +19,8 @@ runtime manager or a new dependency.
 ## Open
 
 The next decision is how to represent components and asset ownership while
-keeping the public core API small and headless-observable.
+keeping the public core API small and headless-observable. Windows CTest still
+needs a separate portability slice.
 
 ## Evidence so far
 
@@ -29,5 +30,5 @@ failures around `.exe` names and direct script execution.
 
 ## Next action
 
-Add one headless sample assertion that consumes resolved hierarchy data, then
-separate the Windows CTest harness repair into its own m8 sprint.
+The hierarchy sample now consumes resolved transforms and proves dump/see/drive.
+Next, repair the Windows CTest harness in its own m8 sprint.
