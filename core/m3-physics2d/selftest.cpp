@@ -4,6 +4,39 @@
 
 // WHY: regression test for gravity integration; static bodies must never move.
 int main() {
+  if (!clank::m3::QueryAabb(nullptr, {{0.0f, 0.0f}, {1.0f, 1.0f}}).empty()) return 1;
+  clank::m3::World* qw = clank::m3::CreateWorld({0.0f, 0.0f});
+  if (qw == nullptr) return 1;
+  if (!clank::m3::QueryAabb(qw, {{0.0f, 0.0f}, {1.0f, 1.0f}}).empty()) return 1;
+  clank::m3::BodyDef qs{};
+  qs.position = {0.0f, 0.0f};
+  qs.circle_r = 1.0f;
+  clank::m3::Body* qstat = clank::m3::CreateBody(qw, qs);
+  clank::m3::BodyDef qd{};
+  qd.type = clank::m3::BodyType::Dynamic;
+  qd.position = {3.0f, 0.0f};
+  qd.circle_r = 0.5f;
+  clank::m3::Body* qdyn = clank::m3::CreateBody(qw, qd);
+  clank::m3::BodyDef qo = qd;
+  qo.position = {6.0f, 0.0f};
+  clank::m3::Body* qout = clank::m3::CreateBody(qw, qo);
+  if (qstat == nullptr || qdyn == nullptr || qout == nullptr) return 1;
+  const auto qhits = clank::m3::QueryAabb(qw, {{-1.0f, -1.0f}, {3.5f, 1.0f}});
+  const auto qhits_again = clank::m3::QueryAabb(qw, {{-1.0f, -1.0f}, {3.5f, 1.0f}});
+  const auto qedge = clank::m3::QueryAabb(qw, {{3.5f, -0.5f}, {4.0f, 0.5f}});
+  const auto qmiss = clank::m3::QueryAabb(qw, {{3.7f, -0.5f}, {4.0f, 0.5f}});
+  const bool query_ok = qhits.size() == 2 && qhits[0] == qstat && qhits[1] == qdyn &&
+                        qhits_again.size() == 2 && qhits_again[0] == qstat &&
+                        qhits_again[1] == qdyn && qedge.size() == 1 && qedge[0] == qdyn &&
+                        qmiss.empty();
+  std::printf("m3 query aabb hits=%zu edge=%zu miss=%zu %s\n", qhits.size(), qedge.size(),
+              qmiss.size(), query_ok ? "PASS" : "FAIL");
+  clank::m3::DestroyBody(qout);
+  clank::m3::DestroyBody(qdyn);
+  clank::m3::DestroyBody(qstat);
+  clank::m3::DestroyWorld(qw);
+  if (!query_ok) return 1;
+
   clank::m3::World* w = clank::m3::CreateWorld({0.0f, -10.0f});
   if (w == nullptr) return 1;
   clank::m3::BodyDef fall{};
