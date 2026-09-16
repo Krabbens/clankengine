@@ -35,4 +35,6 @@ with tempfile.TemporaryDirectory() as temp:
     assert state["x"] >= 1, f"player alive, got hp {state['x']}"
     assert state["angle"] == 1, f"exit reached, got status {state['angle']}"
     assert not [e for e in scene["entities"] if e["name"] == "rupee"], "no rupees left"
+    particles = [e for e in scene["entities"] if e["name"] == "particle"]
+    assert particles, "win state must expose deterministic celebration particles"
 print("zelda-win: 5 rupees, exit reached, deterministic PASS")

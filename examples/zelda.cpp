@@ -49,6 +49,18 @@ struct Rupee {
   bool taken = false;
 };
 
+struct Particle {
+  float x = 0;
+  float y = 0;
+  float z = 0;
+  float vx = 0;
+  float vy = 0;
+  float vz = 0;
+  float life = 0;
+  float max_life = 0;
+  clank::m2::Color color{};
+};
+
 void Collide(float& x, float& z, float r) {
   x = std::clamp(x, kMinX, kMaxX);
   z = std::clamp(z, kMinZ, kMaxZ);
@@ -81,8 +93,13 @@ struct Game {
   int status = 0;  // 0 playing, 1 won, 2 dead
   Enemy enemies[3]{};
   Rupee gems[5]{};
+  Particle particles[32]{};
+  int next_particle = 0;
   clank::m0::Rng rng{};
   clank::m2::Texture grass{};
+  clank::m2::Model player_model{};
+  clank::m2::Material player_material{};
+  clank::m2::Animation player_animation{};
   clank::m2::Audio audio{};
   clank::m2::Sfx pickup{};
   clank::m2::Sfx sword{};
@@ -97,6 +114,11 @@ struct Game {
     fanfare = clank::m2::LoadTone(audio, 660, 350, 0);
     // WHY checker grass: procedural pattern, no binary assets, deterministic on every backend.
     grass = clank::m2::LoadChecker(8, {24, 42, 32, 255}, {34, 62, 44, 255});
+    // WHY a procedural model: the sample exercises explicit asset ownership without requiring a
+    // binary model in the repository; the renderer uses the same cube fallback headless and live.
+    player_model = clank::m2::LoadModel("", {0.62f, 0.8f, 0.62f});
+    player_material = clank::m2::CreateMaterial({90, 200, 120, 255}, 0.85f);
+    player_animation = clank::m2::CreateAnimation(2, 4.0f);
     const float bx[5] = {-3.0f, 3.0f, 0.0f, -4.0f, 4.0f};
     const float bz[5] = {3.0f, 3.0f, 0.0f, -3.0f, 2.0f};
     for (int i = 0; i < 5; ++i) {
@@ -116,6 +138,9 @@ struct Game {
   }
 
   ~Game() {
+    clank::m2::UnloadAnimation(player_animation);
+    clank::m2::UnloadMaterial(player_material);
+    clank::m2::UnloadModel(player_model);
     clank::m2::UnloadSfx(audio, pickup);
     clank::m2::UnloadSfx(audio, sword);
     clank::m2::UnloadSfx(audio, fanfare);
@@ -123,7 +148,38 @@ struct Game {
     clank::m2::CloseAudio(audio);
   }
 
+  void Emit(float x, float y, float z, int count, clank::m2::Color color, float speed, float life) {
+    for (int i = 0; i < count; ++i) {
+      const float angle = static_cast<float>(clank::m0::NextFloat01(rng)) * 6.2831853f;
+      const float magnitude =
+          speed * (0.55f + static_cast<float>(clank::m0::NextFloat01(rng)) * 0.45f);
+      Particle& p = particles[next_particle++ % 32];
+      p.x = x;
+      p.y = y;
+      p.z = z;
+      p.vx = std::cos(angle) * magnitude;
+      p.vy = speed * (0.55f + static_cast<float>(clank::m0::NextFloat01(rng)) * 0.45f);
+      p.vz = std::sin(angle) * magnitude;
+      p.max_life = life * (0.75f + static_cast<float>(clank::m0::NextFloat01(rng)) * 0.25f);
+      p.life = p.max_life;
+      p.color = color;
+    }
+  }
+
+  void UpdateParticles(float dt) {
+    for (auto& p : particles) {
+      if (p.life <= 0) continue;
+      p.life = std::max(0.0f, p.life - dt);
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.z += p.vz * dt;
+      p.vy -= 4.0f * dt;
+    }
+  }
+
   void Update(float dt, bool up, bool down, bool left, bool right, bool atk_edge) {
+    clank::m2::AdvanceAnimation(player_animation, dt);
+    UpdateParticles(dt);
     if (status == 2) return;
     const float ix = (right ? 1.0f : 0.0f) - (left ? 1.0f : 0.0f);
     const float iz = (down ? 1.0f : 0.0f) - (up ? 1.0f : 0.0f);
@@ -138,6 +194,7 @@ struct Game {
     if (atk > 0) atk -= dt;
     if (atk_edge && atk <= 0) {
       atk = 0.25f;
+      Emit(px + fx * 0.9f, 0.6f, pz + fz * 0.9f, 5, {255, 240, 150, 255}, 1.6f, 0.35f);
       clank::m2::PlaySfx(audio, sword);
       // WHY spin, not cone: fixed camera + replay input make facing fiddly;
       // a 360-degree spin keeps combat deterministic and fun with one button.
@@ -145,7 +202,10 @@ struct Game {
         if (!e.alive) continue;
         const float dx = e.x - px;
         const float dz = e.z - pz;
-        if (dx * dx + dz * dz < 1.96f) e.alive = false;
+        if (dx * dx + dz * dz < 1.96f) {
+          e.alive = false;
+          Emit(e.x, 0.55f, e.z, 10, {255, 120, 100, 255}, 2.0f, 0.65f);
+        }
       }
     }
     if (inv > 0) inv -= dt;
@@ -178,6 +238,7 @@ struct Game {
       if (status == 0 && inv <= 0 && hx * hx + hz * hz < 0.49f) {
         hp -= 1.0f;
         inv = 1.0f;
+        Emit(px, 0.55f, pz, 8, {255, 100, 90, 255}, 1.3f, 0.45f);
         if (hp <= 0) {
           hp = 0;
           status = 2;
@@ -191,6 +252,7 @@ struct Game {
       if (dx * dx + dz * dz < 0.49f) {
         g.taken = true;
         ++rupees;
+        Emit(g.x, 0.45f, g.z, 8, {120, 255, 190, 255}, 1.4f, 0.75f);
         clank::m2::PlaySfx(audio, pickup);
       }
     }
@@ -200,6 +262,7 @@ struct Game {
       // WHY inside status==0: the outer guard makes this edge-triggered, so the fanfare fires once.
       if (dx * dx + dz * dz < 1.0f) {
         status = 1;
+        Emit(kExitX, 0.4f, kExitZ, 24, {255, 220, 100, 255}, 2.6f, 2.4f);
         clank::m2::PlaySfx(audio, fanfare);
       }
     }
@@ -245,12 +308,20 @@ struct Game {
     }
     const bool blink = inv > 0 && static_cast<int>(inv * 10) % 2 == 0;
     if (!blink) {
-      m2::DrawCube(renderer, px, 0.4f, pz, 0.62f, 0.8f, 0.62f, {90, 200, 120, 255});
+      m2::DrawModel(renderer, player_model, {px, 0.4f, pz}, {1, 1, 1}, player_material,
+                    player_animation);
       m2::DrawCubeWires(renderer, px, 0.4f, pz, 0.62f, 0.8f, 0.62f, {220, 255, 230, 255});
       m2::DrawSphere(renderer, px, 1.0f, pz, 0.24f, {240, 220, 180, 255});
     }
     if (atk > 0) {
       m2::DrawSphere(renderer, px + fx * 1.1f, 0.6f, pz + fz * 1.1f, 0.16f, {255, 240, 150, 255});
+    }
+    for (const auto& p : particles) {
+      if (p.life <= 0) continue;
+      const float fade = std::clamp(p.life / p.max_life, 0.0f, 1.0f);
+      auto color = p.color;
+      color.a = static_cast<unsigned char>(std::lround(255.0f * fade));
+      m2::DrawCube(renderer, p.x, p.y, p.z, 0.1f, 0.1f, 0.1f, color);
     }
     m2::EndMode3D(renderer);
     m2::DrawText(renderer, "03 / ZELDA", 44, 146, 20, {226, 235, 244, 255});
@@ -282,6 +353,9 @@ struct Game {
     for (const Wall& w : kWalls)
       s.entities.push_back({id++, "wall", w.cx, w.cz, 0, w.hx * 2, w.hz * 2, 0.5f});
     s.entities.push_back({id++, "exit", kExitX, kExitZ, open() ? 1.0f : 0.0f, 1.4f, 1.4f, 0.05f});
+    for (const auto& p : particles) {
+      if (p.life > 0) s.entities.push_back({id++, "particle", p.x, p.z, 0, 0.1f, 0.1f, p.y});
+    }
     s.entities.push_back({id++, "state", hp, static_cast<float>(rupees), static_cast<float>(status),
                           1, 1, static_cast<float>(atk)});
     return s;

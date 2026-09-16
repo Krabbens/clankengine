@@ -1,0 +1,15 @@
+{
+  "module": "m8",
+  "agent": "agent-main",
+  "branch": "a/m8-zelda-gameplay",
+  "started_utc": "2026-09-16T16:20:00Z",
+  "heartbeat_utc": "2026-09-16T16:20:00Z",
+  "ttl_min": 30,
+  "intent": "Add deterministic Zelda feedback and restartable gameplay",
+  "paths": [
+    "examples/",
+    "test/",
+    "spec/"
+  ],
+  "exception": null
+}
