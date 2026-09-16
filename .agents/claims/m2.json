@@ -1,0 +1,17 @@
+{
+  "module": "m2",
+  "agent": "agent-zelda",
+  "branch": "a/m2-cylinder-wires",
+  "started_utc": "2026-09-16T06:13:24Z",
+  "heartbeat_utc": "2026-09-16T06:15:12Z",
+  "ttl_min": 30,
+  "intent": "CylinderWires plus zelda migration, closing 3D facade bypass",
+  "paths": [
+    "core/m2-render/"
+  ],
+  "exception": {
+    "type": "allow-cross",
+    "reason": "zelda 3D calls live in examples/zelda.cpp; migrating it proves CylinderWires and leaves zero raw 3D calls in samples",
+    "extra_bench": "zelda replay checks plus frame update_ms in PR body"
+  }
+}

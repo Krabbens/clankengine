@@ -52,7 +52,7 @@ struct Camera {
   float fov = 45;
 };
 
-enum class Draw3DKind { Cube, CubeWires, Sphere, SphereWires, Cylinder };
+enum class Draw3DKind { Cube, CubeWires, Sphere, SphereWires, Cylinder, CylinderWires };
 
 // WHY one entry: a/b/c read as sizes (cube), radius (sphere) or rTop/rBottom/height (cylinder);
 // n/m read as rings/slices. Agents get the full 3D call without a log type per shape.
@@ -73,6 +73,8 @@ void DrawSphereWires(Renderer& r, float x, float y, float z, float radius, int r
                      Color c);
 void DrawCylinder(Renderer& r, float x, float y, float z, float r_top, float r_bottom, float height,
                   int slices, Color c);
+void DrawCylinderWires(Renderer& r, float x, float y, float z, float r_top, float r_bottom,
+                       float height, int slices, Color c);
 [[nodiscard]] std::size_t Draw3DLogCount(const Renderer& r);
 [[nodiscard]] const Draw3DEntry* Draw3DLogAt(const Renderer& r, std::size_t i);
 [[nodiscard]] std::size_t DrawLogCount(const Renderer& r);

@@ -179,41 +179,41 @@ struct Game {
     }
   }
 
-  void Draw() const {
-    const Camera3D cam{{0, 14, 10}, {0, 0, 0.3f}, {0, 1, 0}, 45, CAMERA_PERSPECTIVE};
-    BeginMode3D(cam);
-    DrawCube({0, -0.15f, 0}, 14.4f, 0.3f, 10.4f, {24, 42, 32, 255});
-    DrawCube({0, -0.12f, 0}, 13.6f, 0.3f, 9.6f, {34, 62, 44, 255});
+  void Draw(clank::m2::Renderer& renderer) const {
+    namespace m2 = clank::m2;
+    const m2::Camera cam{{0, 14, 10}, {0, 0, 0.3f}, {0, 1, 0}, 45};
+    m2::BeginMode3D(renderer, cam);
+    m2::DrawCube(renderer, 0, -0.15f, 0, 14.4f, 0.3f, 10.4f, {24, 42, 32, 255});
+    m2::DrawCube(renderer, 0, -0.12f, 0, 13.6f, 0.3f, 9.6f, {34, 62, 44, 255});
     for (const Wall& w : kWalls) {
-      DrawCube({w.cx, 0.5f, w.cz}, w.hx * 2, 1.0f, w.hz * 2, {96, 110, 128, 255});
-      DrawCubeWires({w.cx, 0.5f, w.cz}, w.hx * 2, 1.0f, w.hz * 2, {160, 180, 200, 255});
+      m2::DrawCube(renderer, w.cx, 0.5f, w.cz, w.hx * 2, 1.0f, w.hz * 2, {96, 110, 128, 255});
+      m2::DrawCubeWires(renderer, w.cx, 0.5f, w.cz, w.hx * 2, 1.0f, w.hz * 2, {160, 180, 200, 255});
     }
     const bool open = rupees >= 5;
-    DrawCylinder({kExitX, 0.05f, kExitZ}, 0.7f, 0.7f, 0.1f, 24,
-                 open ? Color{255, 210, 90, 255} : Color{60, 70, 90, 255});
-    DrawCylinderWires({kExitX, 0.05f, kExitZ}, 0.7f, 0.7f, 0.1f, 24,
-                      open ? Color{255, 240, 180, 255} : Color{100, 110, 130, 255});
+    m2::DrawCylinder(renderer, kExitX, 0.05f, kExitZ, 0.7f, 0.7f, 0.1f, 24,
+                     open ? m2::Color{255, 210, 90, 255} : m2::Color{60, 70, 90, 255});
+    m2::DrawCylinderWires(renderer, kExitX, 0.05f, kExitZ, 0.7f, 0.7f, 0.1f, 24,
+                          open ? m2::Color{255, 240, 180, 255} : m2::Color{100, 110, 130, 255});
     for (const auto& g : gems) {
       if (g.taken) continue;
-      DrawSphere({g.x, 0.45f, g.z}, 0.28f, {70, 218, 150, 255});
-      DrawSphereWires({g.x, 0.45f, g.z}, 0.3f, 6, 8, {200, 255, 220, 255});
+      m2::DrawSphere(renderer, g.x, 0.45f, g.z, 0.28f, {70, 218, 150, 255});
+      m2::DrawSphereWires(renderer, g.x, 0.45f, g.z, 0.3f, 6, 8, {200, 255, 220, 255});
     }
     for (const auto& e : enemies) {
       if (!e.alive) continue;
-      DrawSphere({e.x, 0.45f, e.z}, 0.42f, {210, 70, 70, 255});
-      DrawSphereWires({e.x, 0.45f, e.z}, 0.43f, 6, 8, {255, 200, 200, 255});
+      m2::DrawSphere(renderer, e.x, 0.45f, e.z, 0.42f, {210, 70, 70, 255});
+      m2::DrawSphereWires(renderer, e.x, 0.45f, e.z, 0.43f, 6, 8, {255, 200, 200, 255});
     }
     const bool blink = inv > 0 && static_cast<int>(inv * 10) % 2 == 0;
     if (!blink) {
-      DrawCube({px, 0.4f, pz}, 0.62f, 0.8f, 0.62f, {90, 200, 120, 255});
-      DrawCubeWires({px, 0.4f, pz}, 0.62f, 0.8f, 0.62f, {220, 255, 230, 255});
-      DrawSphere({px, 1.0f, pz}, 0.24f, {240, 220, 180, 255});
+      m2::DrawCube(renderer, px, 0.4f, pz, 0.62f, 0.8f, 0.62f, {90, 200, 120, 255});
+      m2::DrawCubeWires(renderer, px, 0.4f, pz, 0.62f, 0.8f, 0.62f, {220, 255, 230, 255});
+      m2::DrawSphere(renderer, px, 1.0f, pz, 0.24f, {240, 220, 180, 255});
     }
     if (atk > 0) {
-      const Vector3 tip{px + fx * 1.1f, 0.6f, pz + fz * 1.1f};
-      DrawSphere(tip, 0.16f, {255, 240, 150, 255});
+      m2::DrawSphere(renderer, px + fx * 1.1f, 0.6f, pz + fz * 1.1f, 0.16f, {255, 240, 150, 255});
     }
-    EndMode3D();
+    m2::EndMode3D(renderer);
     DrawText("03 / ZELDA", 44, 146, 20, {226, 235, 244, 255});
     DrawText(TextFormat("HP %.0f/5   RUPEE %d/5   %s", static_cast<double>(hp), rupees,
                         status == 1   ? "WIN!"
@@ -278,6 +278,6 @@ int main(int argc, char** argv) {
         game.Update(static_cast<float>(dt), up, dn, lf, rt, atk && !prev_atk);
         prev_atk = atk;
       },
-      [](const zelda::Game& game, clank::m2::Renderer&) { game.Draw(); },
+      [](const zelda::Game& game, clank::m2::Renderer& renderer) { game.Draw(renderer); },
       [](const zelda::Game& game, int seed) { return game.Scene(seed); });
 }
