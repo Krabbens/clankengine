@@ -7,30 +7,30 @@ through explicit, deterministic slices rather than a large editor framework.
 
 ## Current experiment
 
-`hierarchy` sample: prove stable parent-linked scene entities and deterministic
-world-transform resolution at the agent-facing sample boundary.
+Build a thin Unreal-like runtime foundation from deterministic slices: m3 AABB
+queries, m5 scene/components, m6 named actions, m7 Windows observability, and
+the m8 hierarchy sample.
 
 ## Last decision
 
-Scene hierarchy is the first capability slice because it supports Actor-like
-composition, prefab roots, and later component attachment without adding a
-runtime manager or a new dependency.
+The runtime stays explicit and manager-free: stable entity/component IDs,
+deterministic input actions, physics queries, and headless dump/see/drive are
+the useful foundation before any editor or large object framework.
 
 ## Open
 
-The next decision is how to represent components and asset ownership while
-keeping the public core API small and headless-observable. Windows CTest still
-needs a separate portability slice.
+The next decision is how to resolve the two open m8 PRs while keeping one
+claim per module. Component ownership and action mapping are now implemented;
+asset handles and richer Actor lifecycle remain future slices.
 
 ## Evidence so far
 
-The Windows build passes. The focused suite passes `m5-selftest`, headless dump,
-replay, and minimal sample. Full CTest still has pre-existing Windows harness
-failures around `.exe` names and direct script execution.
+The integrated Windows build passes full CTest `18/18`. m3 QueryAabb,
+m5 ComponentStore, m6 named actions, m7 `shot.py`, and the hierarchy sample
+all pass focused tests; the m7 smoke collects deterministic JSON and PNG
+artifacts on Windows.
 
 ## Next action
 
-The hierarchy sample now consumes resolved transforms and proves dump/see/drive.
-The Windows CTest harness also passes 18/18 after portable executable naming,
-Python launcher, and temp screenshot fixes. The remaining workflow issue is an
-older open m8 PR, not a local test failure.
+Keep PR #109 ready and resolve the older open m8 PR #107 before merging the
+sample. No code or test failure remains in the current local integration.
