@@ -20,6 +20,10 @@ const char* KeyStr(Key k) {
       return "Right";
     case Key::Space:
       return "Space";
+    case Key::Restart:
+      return "Restart";
+    case Key::Interact:
+      return "Interact";
     case Key::Escape:
       return "Escape";
   }
@@ -37,6 +41,10 @@ bool KeyParse(const std::string& s, Key& k) {
     k = Key::Right;
   else if (s == "Space")
     k = Key::Space;
+  else if (s == "Restart")
+    k = Key::Restart;
+  else if (s == "Interact")
+    k = Key::Interact;
   else if (s == "Escape")
     k = Key::Escape;
   else
