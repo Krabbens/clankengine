@@ -22,7 +22,8 @@
           "angle": { "type": "number" },
           "sx": { "type": "number" },
           "sy": { "type": "number" },
-          "z": { "type": "number" }
+          "z": { "type": "number" },
+          "parent": { "type": "integer" }
         }
       }
     }
