@@ -7,7 +7,7 @@ import sys
 import tempfile
 
 binary, replay = map(lambda p: str(Path(p).resolve()), sys.argv[1:])
-assert Path(binary).name == "breakout"
+assert Path(binary).stem == "breakout"
 with tempfile.TemporaryDirectory() as temp:
     root = Path(temp)
 

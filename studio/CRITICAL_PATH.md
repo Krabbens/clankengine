@@ -1,5 +1,5 @@
 # Critical Path
 
-- Current blocker: the Windows CTest harness is red even though the hierarchy sample is green.
-- Next step: repair Windows executable naming, temp paths, and Python tool launching in an isolated m8 slice.
+- Current blocker: PR #107 already owns the m8 module guard while this verified m8 slice is open.
+- Next step: resolve the existing m8 PR queue, then merge this sample/portability slice.
 - Likely next blocker: components need an ownership and serialization model that does not turn `m5` into a hidden manager.

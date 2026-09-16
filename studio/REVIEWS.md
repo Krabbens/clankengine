@@ -79,3 +79,11 @@ This was an internal adversarial pass, not an independent reviewer.
 
 - Decision: accept the proof direction; improve the platform gate before adding components.
 - Next sprint: repair Windows CTest portability in a separate m8 PR.
+
+## Follow-up: Windows portability proof
+
+- Date: 2026-09-16
+- Claim: the standard agent-facing CTest suite is runnable on Windows without weakening Unix-only exclusions.
+- Evidence: `.exe`-safe test names, Python-launched extensionless claim tool, portable core screenshot path, and full Windows CTest 18/18.
+- Verdict: ACCEPT locally; merge remains gated by the pre-existing open m8 PR #107.
+- Missing evidence: CI rerun after the duplicate-module queue is resolved.

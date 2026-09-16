@@ -31,4 +31,6 @@ failures around `.exe` names and direct script execution.
 ## Next action
 
 The hierarchy sample now consumes resolved transforms and proves dump/see/drive.
-Next, repair the Windows CTest harness in its own m8 sprint.
+The Windows CTest harness also passes 18/18 after portable executable naming,
+Python launcher, and temp screenshot fixes. The remaining workflow issue is an
+older open m8 PR, not a local test failure.

@@ -15,14 +15,6 @@
 
 ### READY
 
-- `M8-WINDOWS-TESTS-001` — type: infrastructure; owner: next sprint; priority: P1; criticality: P1; effort: S; epic: agent observability.
-  - Context: five existing CTest scripts assume Linux executable names or direct script execution.
-  - Goal: make the full CTest suite runnable on Windows without weakening Linux coverage.
-  - Dependencies: none.
-  - Blocks: clean Windows acceptance signal for future slices.
-  - DoD: full CTest passes on Windows; scripts resolve `.exe` names and invoke claim tools through Python when needed.
-  - Next Action: claim m8 and reproduce each failure on a clean branch.
-
 ### IN PROGRESS
 
 ### REVIEW / TEST
@@ -44,10 +36,21 @@
   - DoD: `hierarchy` builds; dump contains `10 -> 11 -> 12`; repeated replay produces byte-identical JSON/PNG; undriven and driven outputs differ.
   - Next Action: open the m8 sample PR and pass CI.
   - Implementation notes: no new engine API; `ResolveWorldTransforms` is consumed directly by the sample.
-  - Test/acceptance notes: Windows focused sample test 1/1 passes; full suite has five pre-existing Windows harness failures.
+  - Test/acceptance notes: Windows focused sample test 1/1 passes; full Windows CTest is now 18/18.
+- `M8-WINDOWS-TESTS-001` — type: infrastructure; owner: codex; priority: P1; criticality: P1; effort: S; epic: agent observability.
+  - Context: five existing CTest scripts assumed Linux executable names or direct script execution.
+  - Goal: make the full CTest suite runnable on Windows without weakening Linux coverage.
+  - Dependencies: none.
+  - Blocks: clean Windows acceptance signal for future slices.
+  - DoD: full CTest passes on Windows; scripts resolve `.exe` names and invoke claim tools through Python when needed.
+  - Next Action: merge after the existing m8 PR queue is resolved.
+  - Implementation notes: preserve intentional Unix-only Bash exclusions; use the platform temp directory for core screenshots.
+  - Test/acceptance notes: full Windows CTest is 18/18; Linux behavior is unchanged by the portable path/name fixes.
 
 ### BLOCKED
 
 ### DONE
+
+- `M5-HIERARCHY-001` — merged as PR #108; affine transform regression and JSON validation are covered.
 
 ## ARCHIVE
