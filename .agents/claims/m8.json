@@ -1,0 +1,15 @@
+{
+  "module": "m8",
+  "agent": "agent-main",
+  "branch": "a/m8-app-golden",
+  "started_utc": "2026-09-16T01:07:22Z",
+  "heartbeat_utc": "2026-09-16T01:07:22Z",
+  "ttl_min": 30,
+  "intent": "main.cpp on m0/m1/m2/m5 + first golden JSON",
+  "paths": [
+    "examples/",
+    "test/",
+    "spec/"
+  ],
+  "exception": null
+}

@@ -31,11 +31,14 @@ target_include_directories(m0_foundation PUBLIC core/m0-foundation/public)
 
 add_library(m1_loop STATIC core/m1-loop/impl/loop.cpp)
 target_link_libraries(m1_loop PUBLIC clank_warnings)
+# WHY PUBLIC: static lib keeps raylib refs; final exes must see them to link.
+target_link_libraries(m1_loop PUBLIC raylib)
 target_include_directories(m1_loop PUBLIC core/m1-loop/public)
 
 add_library(m2_render STATIC core/m2-render/impl/render.cpp)
 target_link_libraries(m2_render PUBLIC clank_warnings)
-target_link_libraries(m2_render PRIVATE raylib)
+# WHY PUBLIC: same static-link propagation as m1.
+target_link_libraries(m2_render PUBLIC raylib)
 target_include_directories(m2_render PUBLIC core/m2-render/public)
 
 add_library(m3_physics2d STATIC core/m3-physics2d/impl/physics2d.cpp)
@@ -56,10 +59,9 @@ add_library(m6_input STATIC core/m6-input/impl/input.cpp)
 target_link_libraries(m6_input PUBLIC clank_warnings)
 target_include_directories(m6_input PUBLIC core/m6-input/public)
 
-# Skeleton binary. Adopts m0 Flags in wave 2; still standalone today.
+# clank app: headless-first game loop on m0/m1/m2/m5.
 add_executable(clank src/main.cpp)
-target_link_libraries(clank PRIVATE clank_warnings)
-target_include_directories(clank PRIVATE core)
+target_link_libraries(clank PRIVATE m0_foundation m1_loop m2_render m5_scene clank_warnings)
 
 # m8 sample: headless scene dump/reload demo.
 add_executable(minimal examples/minimal.cpp)
@@ -84,3 +86,10 @@ clank_selftest(m6-selftest m6_input core/m6-input/selftest.cpp core/m6-input/pub
 
 add_test(NAME smoke-headless-dump COMMAND clank --headless --shot-after 60 --dump-scene ${CMAKE_BINARY_DIR}/scene.json --seed 42)
 add_test(NAME minimal-sample COMMAND minimal)
+
+# WHY shell compare, unix-only: CTest cannot diff stdout; CI matrix is ubuntu-only.
+# Golden is byte-exact: minimal is fixed-seed IEEE add/mul only, no libm calls.
+if(NOT WIN32)
+  add_test(NAME golden-minimal-scene
+    COMMAND sh -c "$<TARGET_FILE:minimal> > ${CMAKE_BINARY_DIR}/minimal_out.json && ${CMAKE_COMMAND} -E compare_files ${CMAKE_BINARY_DIR}/minimal_out.json ${CMAKE_SOURCE_DIR}/test/golden/minimal_scene.json")
+endif()

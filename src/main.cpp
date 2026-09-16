@@ -1,108 +1,111 @@
-// clank skeleton: CLI + observability stub (dump/shot/drive).
-// Real loop/render/physics land in core/mX/ as agents claim modules.
-// Logs -> stderr, machine-readable results (paths) -> stdout.
-#include <cstdint>
+// clank app: agent-first game loop on m0 (flags) + m1 (loop) + m2 (render) + m5 (scene).
+// Logs -> stderr; machine-readable result paths -> stdout.
+#include "m0/foundation.hpp"
+#include "m1/loop.hpp"
+#include "m2/render.hpp"
+#include "m5/scene.hpp"
+
 #include <cstdio>
 #include <fstream>
 #include <string>
-#include <vector>
 
 namespace {
 
-struct Args {
-  bool headless = false;
-  int shot_after = -1;
-  std::string dump_scene;
-  std::string replay;
-  int seed = 42;
-};
-
-// Minimal 1x1 transparent PNG (67 bytes). Placeholder until m2-render
-// wires raylib TakeScreenshot(). Deterministic by construction.
-constexpr unsigned char kDotPng[] = {
-    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
-    0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
-    0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
-    0x42, 0x60, 0x82};
-
-bool WriteFile(const std::string& path, const char* data, std::size_t n) {
+bool WriteText(const std::string& path, const std::string& text) {
   std::ofstream out(path, std::ios::binary);
   if (!out) return false;
-  out.write(data, static_cast<std::streamsize>(n));
+  out << text;
   return static_cast<bool>(out);
 }
 
-int ParseInt(const char* s, int fallback) {
-  if (s == nullptr) return fallback;
-  try {
-    return std::stoi(s);
-  } catch (...) {
-    return fallback;
+bool HasHelp(int argc, char** argv) {
+  for (int i = 1; i < argc; ++i) {
+    const std::string t = argv[i];
+    if (t == "--help" || t == "-h") return true;
   }
+  return false;
 }
+
+clank::m5::Scene DemoScene(int seed) {
+  clank::m5::Scene s;
+  s.seed = seed;
+  s.entities.push_back({1, "player one", 0.0f, 0.0f, 0.0f, 1.0f, 1.0f});
+  return s;
+}
+
+std::string ShotPath(int frame) { return "/tmp/clank_frame" + std::to_string(frame) + ".png"; }
 
 }  // namespace
 
 int main(int argc, char** argv) {
-  Args a;
-  for (int i = 1; i < argc; ++i) {
-    std::string t = argv[i];
-    auto need = [&](const char* flag) {
-      if (i + 1 >= argc) {
-        std::fprintf(stderr, "clank: %s needs a value\n", flag);
-        return false;
+  if (HasHelp(argc, argv)) {
+    std::fprintf(stderr,
+                 "usage: clank --headless --shot-after N --dump-scene out.json "
+                 "[--replay demo.clk --seed 42]\n");
+    return 0;
+  }
+  auto parsed = clank::m0::ParseFlags(argc, argv);
+  if (!parsed) {
+    std::fprintf(stderr, "%s\n", parsed.error().c_str());
+    return 2;
+  }
+  const clank::m0::Flags flags = *parsed;
+  if (!flags.replay.empty()) {
+    // WHY noted, not silent: m6 input playback lands in wave 4.
+    std::fprintf(stderr, "clank: --replay ignored (input playback TODO)\n");
+  }
+
+  clank::m5::Scene scene = DemoScene(flags.seed);
+  const int frames = flags.shot_after >= 0 ? flags.shot_after : 60;
+  std::fprintf(stderr, "clank: %s frames=%d seed=%d\n", flags.headless ? "headless" : "windowed",
+               frames, flags.seed);
+  auto update = [&](clank::m1::Frame, double dt) {
+    scene.entities[0].x += static_cast<float>(dt);
+  };
+  clank::m2::Renderer renderer = clank::m2::Create();
+
+  if (flags.headless) {
+    clank::m1::Run({1.0 / 60.0, frames}, update);
+    if (flags.shot_after >= 0) {
+      auto shot = clank::m2::TakeScreenshot(renderer, ShotPath(flags.shot_after));
+      if (!shot) {
+        std::fprintf(stderr, "clank: shot failed: %s\n", shot.error().c_str());
+        return 1;
       }
-      return true;
+      std::printf("%s\n", ShotPath(flags.shot_after).c_str());
+    }
+  } else {
+    int frame = -1;
+    auto counted = [&](clank::m1::Frame f, double dt) {
+      frame = f.number;
+      update(f, dt);
     };
-    if (t == "--headless") {
-      a.headless = true;
-    } else if (t == "--shot-after") {
-      if (!need("--shot-after")) return 2;
-      a.shot_after = ParseInt(argv[++i], -1);
-    } else if (t == "--dump-scene") {
-      if (!need("--dump-scene")) return 2;
-      a.dump_scene = argv[++i];
-    } else if (t == "--replay") {
-      if (!need("--replay")) return 2;
-      a.replay = argv[++i];
-    } else if (t == "--seed") {
-      if (!need("--seed")) return 2;
-      a.seed = ParseInt(argv[++i], 42);
-    } else if (t == "--help" || t == "-h") {
-      std::fprintf(stderr,
-                   "usage: clank --headless --shot-after N --dump-scene out.json "
-                   "[--replay demo.clk --seed 42]\n");
-      return 0;
-    } else {
-      std::fprintf(stderr, "clank: unknown flag %s\n", t.c_str());
-      return 2;
+    auto draw = [&]() {
+      clank::m1::BeginFrame(20, 20, 30, 255);
+      clank::m2::DrawRect(renderer, scene.entities[0].x * 60.0f, 300.0f, 40.0f, 40.0f,
+                          {255, 255, 255, 255});
+      if (flags.shot_after >= 0 && frame == flags.shot_after) {
+        // WHY inside draw: real TakeScreenshot needs an open window + active frame.
+        auto shot = clank::m2::TakeScreenshot(renderer, ShotPath(frame));
+        if (shot) std::printf("%s\n", ShotPath(frame).c_str());
+      }
+      clank::m1::EndFrame();
+    };
+    auto ran = clank::m1::RunWindowed({1.0 / 60.0, frames}, {}, counted, draw);
+    if (!ran) {
+      std::fprintf(stderr, "clank: %s (hint: use --headless without a display)\n",
+                   ran.error().c_str());
+      return 1;
     }
   }
 
-  std::fprintf(stderr, "clank: stub seed=%d headless=%d replay=%s\n", a.seed, int(a.headless),
-               a.replay.empty() ? "-" : a.replay.c_str());
-
-  if (!a.dump_scene.empty()) {
-    std::ofstream out(a.dump_scene);
-    if (!out) {
-      std::fprintf(stderr, "clank: cannot write %s\n", a.dump_scene.c_str());
+  clank::m2::Destroy(renderer);
+  if (!flags.dump_scene.empty()) {
+    if (!WriteText(flags.dump_scene, clank::m5::DumpJson(scene))) {
+      std::fprintf(stderr, "clank: cannot write %s\n", flags.dump_scene.c_str());
       return 1;
     }
-    // Minimal scene doc; real schema lives in spec/scene.schema.json.
-    out << "{\"version\":0,\"seed\":" << a.seed << ",\"entities\":[]}\n";
-    out.close();
-    std::printf("%s\n", a.dump_scene.c_str());
-  }
-  if (a.shot_after >= 0) {
-    std::string png = "/tmp/clank_frame" + std::to_string(a.shot_after) + ".png";
-    if (!WriteFile(png, reinterpret_cast<const char*>(kDotPng), sizeof(kDotPng))) {
-      std::fprintf(stderr, "clank: cannot write %s\n", png.c_str());
-      return 1;
-    }
-    std::fprintf(stderr, "clank: stub shot frame %d -> %s (1x1 until m2-render)\n", a.shot_after,
-                 png.c_str());
-    std::printf("%s\n", png.c_str());
+    std::printf("%s\n", flags.dump_scene.c_str());
   }
   return 0;
 }

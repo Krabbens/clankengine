@@ -20,7 +20,7 @@ modules:
   m5: ["core/m5-scene/"]
   m6: ["core/m6-input/"]
   m7: ["tools/m7-harness/"]
-  m8: ["examples/", "test/", "spec/"]
+  m8: ["examples/", "test/", "spec/", "src/"]
 
 excluded_from_limits: ["test/", ".png", ".agents/claims/"]
 
