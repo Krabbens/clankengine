@@ -330,4 +330,98 @@ std::expected<bool, std::string> CompareImages(const std::string& path_a, const 
   return frac <= max_diff_frac;
 }
 
+namespace {
+// WHY one backend per Audio: miniaudio device init is process-global, sounds are per-device.
+struct AudioBackend {
+  bool device_ok = false;
+  int next_sfx = 0;
+  std::unordered_map<int, ::Sound> sounds{};
+};
+std::unordered_map<int, AudioBackend>& AudioBackends() {
+  static std::unordered_map<int, AudioBackend> backends;
+  return backends;
+}
+int& NextAudioId() {
+  static int next = 0;
+  return next;
+}
+int& AudioOpenCount() {
+  static int count = 0;
+  return count;
+}
+bool& AudioDeviceStarted() {
+  static bool started = false;
+  return started;
+}
+short SynthSample(int wave, int phase, int period) {
+  if (period <= 1) return 32767;
+  if (wave == 1) return static_cast<short>(phase * 65534 / period - 32767);
+  return phase * 2 < period ? 32767 : -32767;
+}
+}  // namespace
+
+Audio OpenAudio() {
+  Audio audio{.id = NextAudioId(), .valid = true};
+  // WHY refcount: double InitAudioDevice corrupts miniaudio state; last close shuts it down.
+  if (AudioOpenCount() == 0) ::InitAudioDevice();
+  ++AudioOpenCount();
+  const bool ready = ::IsAudioDeviceReady();
+  if (ready) AudioDeviceStarted() = true;
+  AudioBackends()[audio.id] = AudioBackend{.device_ok = ready};
+  return audio;
+}
+
+void CloseAudio(Audio& audio) {
+  if (!audio.valid) return;
+  AudioBackends().erase(audio.id);
+  if (--AudioOpenCount() == 0 && AudioDeviceStarted()) ::CloseAudioDevice();
+  audio.id = -1;
+  audio.valid = false;
+}
+
+bool AudioReady(const Audio& audio) {
+  if (!audio.valid) return false;
+  auto it = AudioBackends().find(audio.id);
+  return it != AudioBackends().end() && it->second.device_ok && ::IsAudioDeviceReady();
+}
+
+Sfx LoadTone(Audio& audio, int freq_hz, int millis, int wave) {
+  Sfx sfx;
+  if (!audio.valid || freq_hz <= 0 || millis <= 0) return sfx;
+  const int count = sfx.rate * millis / 1000;
+  if (count <= 0) return sfx;
+  const int raw_period = sfx.rate / freq_hz;
+  const int period = raw_period > 0 ? raw_period : 1;
+  sfx.frames.reserve(static_cast<size_t>(count));
+  for (int i = 0; i < count; ++i) sfx.frames.push_back(SynthSample(wave, i % period, period));
+  auto it = AudioBackends().find(audio.id);
+  if (it == AudioBackends().end()) return sfx;
+  // WHY id before device check: the handle stays valid headless; only playback goes silent.
+  sfx.id = it->second.next_sfx++;
+  if (!it->second.device_ok) return sfx;
+  ::Wave wave_data{static_cast<unsigned>(count), static_cast<unsigned>(sfx.rate), 16, 1,
+                   sfx.frames.data()};
+  it->second.sounds[sfx.id] = ::LoadSoundFromWave(wave_data);
+  return sfx;
+}
+
+void PlaySfx(Audio& audio, const Sfx& sfx) {
+  if (!audio.valid || sfx.id < 0) return;
+  auto it = AudioBackends().find(audio.id);
+  if (it == AudioBackends().end() || !it->second.device_ok) return;
+  auto sound = it->second.sounds.find(sfx.id);
+  if (sound == it->second.sounds.end()) return;
+  ::PlaySound(sound->second);
+}
+
+void UnloadSfx(Audio& audio, const Sfx& sfx) {
+  if (!audio.valid || sfx.id < 0) return;
+  auto it = AudioBackends().find(audio.id);
+  if (it == AudioBackends().end()) return;
+  auto sound = it->second.sounds.find(sfx.id);
+  if (sound == it->second.sounds.end()) return;
+  if (it->second.device_ok) ::UnloadSound(sound->second);
+  it->second.sounds.erase(sound);
+}
+
 }  // namespace clank::m2

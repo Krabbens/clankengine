@@ -82,9 +82,18 @@ struct Game {
   Enemy enemies[3]{};
   Rupee gems[5]{};
   clank::m0::Rng rng{};
+  clank::m2::Audio audio{};
+  clank::m2::Sfx pickup{};
+  clank::m2::Sfx sword{};
+  clank::m2::Sfx fanfare{};
 
   explicit Game(int seed) {
     clank::m0::Seed(rng, static_cast<uint64_t>(seed));
+    // WHY tones here: square pickup, saw sword, square fanfare; silent without a device.
+    audio = clank::m2::OpenAudio();
+    pickup = clank::m2::LoadTone(audio, 880, 90, 0);
+    sword = clank::m2::LoadTone(audio, 180, 140, 1);
+    fanfare = clank::m2::LoadTone(audio, 660, 350, 0);
     const float bx[5] = {-3.0f, 3.0f, 0.0f, -4.0f, 4.0f};
     const float bz[5] = {3.0f, 3.0f, 0.0f, -3.0f, 2.0f};
     for (int i = 0; i < 5; ++i) {
@@ -103,6 +112,13 @@ struct Game {
     }
   }
 
+  ~Game() {
+    clank::m2::UnloadSfx(audio, pickup);
+    clank::m2::UnloadSfx(audio, sword);
+    clank::m2::UnloadSfx(audio, fanfare);
+    clank::m2::CloseAudio(audio);
+  }
+
   void Update(float dt, bool up, bool down, bool left, bool right, bool atk_edge) {
     if (status == 2) return;
     const float ix = (right ? 1.0f : 0.0f) - (left ? 1.0f : 0.0f);
@@ -118,6 +134,7 @@ struct Game {
     if (atk > 0) atk -= dt;
     if (atk_edge && atk <= 0) {
       atk = 0.25f;
+      clank::m2::PlaySfx(audio, sword);
       // WHY spin, not cone: fixed camera + replay input make facing fiddly;
       // a 360-degree spin keeps combat deterministic and fun with one button.
       for (auto& e : enemies) {
@@ -170,12 +187,17 @@ struct Game {
       if (dx * dx + dz * dz < 0.49f) {
         g.taken = true;
         ++rupees;
+        clank::m2::PlaySfx(audio, pickup);
       }
     }
     if (status == 0 && rupees >= 5) {
       const float dx = kExitX - px;
       const float dz = kExitZ - pz;
-      if (dx * dx + dz * dz < 1.0f) status = 1;
+      // WHY inside status==0: the outer guard makes this edge-triggered, so the fanfare fires once.
+      if (dx * dx + dz * dz < 1.0f) {
+        status = 1;
+        clank::m2::PlaySfx(audio, fanfare);
+      }
     }
   }
 
