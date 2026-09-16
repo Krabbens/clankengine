@@ -38,13 +38,14 @@ int main() {
   clank::m2::Clear(r, white);
   if (clank::m2::DrawLogCount(r) != 0 || clank::m2::Draw3DLogCount(r) != 0) return 1;
   clank::m2::Camera cam{{0, 14, 10}, {0, 0, 0}, {0, 1, 0}, 45};
+  clank::m2::Color blue{.r = 50, .g = 100, .b = 150, .a = 255};
   clank::m2::BeginMode3D(r, cam);
-  clank::m2::DrawCube(r, 1, 2, 3, 4, 5, 6, white);
-  clank::m2::DrawCubeWires(r, 1, 2, 3, 4, 5, 6, white);
-  clank::m2::DrawSphere(r, 1, 2, 3, 4, white);
-  clank::m2::DrawSphereWires(r, 1, 2, 3, 4, 6, 8, white);
-  clank::m2::DrawCylinder(r, 1, 2, 3, 4, 5, 6, 8, white);
-  clank::m2::DrawCylinderWires(r, 1, 2, 3, 4, 5, 6, 8, white);
+  clank::m2::DrawCube(r, 1, 2, 3, 4, 5, 6, blue);
+  clank::m2::DrawCubeWires(r, 1, 2, 3, 4, 5, 6, blue);
+  clank::m2::DrawSphere(r, 1, 2, 3, 4, blue);
+  clank::m2::DrawSphereWires(r, 1, 2, 3, 4, 6, 8, blue);
+  clank::m2::DrawCylinder(r, 1, 2, 3, 4, 5, 6, 8, blue);
+  clank::m2::DrawCylinderWires(r, 1, 2, 3, 4, 5, 6, 8, blue);
   clank::m2::EndMode3D(r);
   if (clank::m2::Draw3DLogCount(r) != 6) return 1;
   const auto* c0 = clank::m2::Draw3DLogAt(r, 0);
@@ -55,7 +56,13 @@ int main() {
   if (c4->kind != clank::m2::Draw3DKind::Cylinder || c4->a != 4 || c4->b != 5) return 1;
   if (c5->kind != clank::m2::Draw3DKind::CylinderWires || c5->n != 8) return 1;
   if (clank::m2::Draw3DLogAt(r, 6) != nullptr) return 1;
+  const std::string shot_3d = "/tmp/m2-selftest-shot-3d.png";
+  if (!clank::m2::TakeScreenshot(r, shot_3d)) return 1;
   clank::m2::Clear(r, white);
+  const std::string shot_blank = "/tmp/m2-selftest-shot-blank.png";
+  if (!clank::m2::TakeScreenshot(r, shot_blank)) return 1;
+  auto rendered_3d = clank::m2::CompareImages(shot_3d, shot_blank, 0.0);
+  if (!rendered_3d || *rendered_3d) return 1;
   if (clank::m2::DrawLogCount(r) != 0 || clank::m2::Draw3DLogCount(r) != 0) return 1;
   clank::m2::DrawRect(r, 0, 0, 1, 1, white);
   if (clank::m2::DrawLogCount(r) != 1) return 1;
@@ -74,6 +81,8 @@ int main() {
   if (clank::m2::CompareImages(path, shot_b, -0.5)) return 1;
   std::remove(path.c_str());
   std::remove(shot_b.c_str());
+  std::remove(shot_3d.c_str());
+  std::remove(shot_blank.c_str());
   std::remove(not_png.c_str());
   // WHY no device asserts: CI has no audio hardware, so only the silent path is provable here.
   clank::m2::Audio audio = clank::m2::OpenAudio();

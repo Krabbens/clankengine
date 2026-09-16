@@ -81,8 +81,9 @@ void DrawCylinderWires(Renderer& r, float x, float y, float z, float r_top, floa
 [[nodiscard]] const Draw3DEntry* Draw3DLogAt(const Renderer& r, std::size_t i);
 [[nodiscard]] std::size_t DrawLogCount(const Renderer& r);
 [[nodiscard]] const DrawEntry* DrawLogAt(const Renderer& r, std::size_t i);
-// Backend calls raylib only when IsWindowReady(); headless rasterizes 2D shapes from DrawLog into
-// a deterministic 1280x720 PNG, while text remains in DrawLog (WHY: no GPU font state headless).
+// Backend calls raylib only when IsWindowReady(); headless rasterizes 2D shapes and a deterministic
+// top-down projection of Draw3DLog into a 1280x720 PNG, while text remains in DrawLog (WHY: no GPU
+// font state headless).
 std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::string& path);
 // Fuzz compare of two PNGs: true when the fraction of pixels differing by more
 // than 5 per channel is within max_diff_frac. Same aspect required; the larger

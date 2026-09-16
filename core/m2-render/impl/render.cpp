@@ -3,6 +3,7 @@
 #include <raylib.h>
 #include <rlgl.h>
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -31,6 +32,11 @@ std::unordered_map<int, Color>& Backgrounds() {
   return backgrounds;
 }
 
+std::unordered_map<int, Camera>& Cameras() {
+  static std::unordered_map<int, Camera> cameras;
+  return cameras;
+}
+
 void Push(const Renderer& r, DrawEntry e) {
   auto it = Logs().find(r.id);
   if (r.valid && it != Logs().end()) it->second.push_back(std::move(e));
@@ -56,6 +62,7 @@ Renderer Create() {
   Logs()[id] = {};
   Logs3D()[id] = {};
   Backgrounds()[id] = {};
+  Cameras()[id] = {};
   return Renderer{.id = id, .valid = true};
 }
 
@@ -63,6 +70,7 @@ void Destroy(Renderer& r) {
   Logs().erase(r.id);
   Logs3D().erase(r.id);
   Backgrounds().erase(r.id);
+  Cameras().erase(r.id);
   r.id = -1;
   r.valid = false;
 }
@@ -76,6 +84,8 @@ void Clear(Renderer& r, Color c) {
   if (r.valid && it3 != Logs3D().end()) it3->second.clear();
   auto bg = Backgrounds().find(r.id);
   if (r.valid && bg != Backgrounds().end()) bg->second = c;
+  auto camera = Cameras().find(r.id);
+  if (r.valid && camera != Cameras().end()) camera->second = {};
   if (::IsWindowReady()) ::ClearBackground(ToRay(c));
 }
 
@@ -130,7 +140,8 @@ void DrawText(Renderer& r, const std::string& text, float x, float y, float size
 }
 
 void BeginMode3D(Renderer& r, Camera camera) {
-  (void)r;
+  auto it = Cameras().find(r.id);
+  if (r.valid && it != Cameras().end()) it->second = camera;
   // WHY: headless keeps the 3D log only; mirror to GPU once m1 owns a window.
   // Precondition: ::IsWindowReady() must be true before ::BeginMode3D().
   if (::IsWindowReady()) ::BeginMode3D(ToRayCam(camera));
@@ -241,8 +252,11 @@ const DrawEntry* DrawLogAt(const Renderer& r, std::size_t i) {
 
 std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::string& path) {
   auto log = Logs().find(r.id);
+  auto log3d = Logs3D().find(r.id);
   auto bg = Backgrounds().find(r.id);
-  if (!r.valid || log == Logs().end() || bg == Backgrounds().end())
+  auto camera = Cameras().find(r.id);
+  if (!r.valid || log == Logs().end() || log3d == Logs3D().end() || bg == Backgrounds().end() ||
+      camera == Cameras().end())
     return std::unexpected("m2: invalid renderer");
   // WHY: real pixels need a window; headless agents still need see-channel bytes.
   if (::IsWindowReady()) {
@@ -272,6 +286,38 @@ std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::st
   }
   ::Image image = ::GenImageColor(kHeadlessWidth, kHeadlessHeight, ToRay(bg->second));
   if (!image.data) return std::unexpected("m2: cannot allocate headless image");
+  constexpr float scale = 42.0f;
+  // WHY top-down: the headless contract needs useful 3D evidence without a GPU; the samples'
+  // fixed cameras all look at the X/Z plane, so this projection stays deterministic and compact.
+  for (const Draw3DEntry& e : log3d->second) {
+    const int x = static_cast<int>(
+        std::lround(kHeadlessWidth * .5f + (e.x - camera->second.target.x) * scale));
+    const int y = static_cast<int>(
+        std::lround(kHeadlessHeight * .5f - (e.z - camera->second.target.z) * scale));
+    const int width = std::max(1, static_cast<int>(std::lround(std::abs(e.a) * 2 * scale)));
+    const int height = std::max(1, static_cast<int>(std::lround(std::abs(e.c) * 2 * scale)));
+    const int radius = std::max(1, static_cast<int>(std::lround(std::abs(e.a) * scale)));
+    switch (e.kind) {
+      case Draw3DKind::Cube:
+        ::ImageDrawRectangle(&image, x - width / 2, y - height / 2, width, height, ToRay(e.color));
+        break;
+      case Draw3DKind::CubeWires:
+        ::ImageDrawRectangleLines(
+            &image,
+            {static_cast<float>(x - width / 2), static_cast<float>(y - height / 2),
+             static_cast<float>(width), static_cast<float>(height)},
+            1, ToRay(e.color));
+        break;
+      case Draw3DKind::Sphere:
+      case Draw3DKind::Cylinder:
+        ::ImageDrawCircle(&image, x, y, radius, ToRay(e.color));
+        break;
+      case Draw3DKind::SphereWires:
+      case Draw3DKind::CylinderWires:
+        ::ImageDrawCircleLines(&image, x, y, radius, ToRay(e.color));
+        break;
+    }
+  }
   for (const DrawEntry& e : log->second) {
     switch (e.kind) {
       case DrawKind::Rect:
