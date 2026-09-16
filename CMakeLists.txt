@@ -65,7 +65,7 @@ target_link_libraries(clank PRIVATE m0_foundation m1_loop m2_render m5_scene m6_
 
 # m8 sample: headless scene dump/reload demo.
 add_executable(minimal examples/minimal.cpp)
-target_link_libraries(minimal PRIVATE m5_scene clank_warnings)
+target_link_libraries(minimal PRIVATE m1_loop m5_scene clank_warnings)
 
 include(CTest)
 
