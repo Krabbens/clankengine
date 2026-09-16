@@ -1,3 +1,5 @@
+#include <raylib.h>
+
 #include <cstdio>
 #include <fstream>
 
@@ -27,6 +29,9 @@ int main() {
     return 1;
   const std::string path = "/tmp/m2-selftest-shot.png";
   if (!clank::m2::TakeScreenshot(r, path)) return 1;
+  ::Image shot = ::LoadImage(path.c_str());
+  if (!shot.data || shot.width != 1280 || shot.height != 720) return 1;
+  ::UnloadImage(shot);
   std::ifstream in(path, std::ios::binary);
   if (!in) return 1;
   // Clear starts a new frame in the log.
@@ -54,11 +59,11 @@ int main() {
   if (clank::m2::DrawLogCount(r) != 0 || clank::m2::Draw3DLogCount(r) != 0) return 1;
   clank::m2::DrawRect(r, 0, 0, 1, 1, white);
   if (clank::m2::DrawLogCount(r) != 1) return 1;
-  // Identical stubs compare equal; bad inputs are errors, not false.
+  // Rasterized headless frames compare by pixels; bad inputs are errors, not false.
   const std::string shot_b = "/tmp/m2-selftest-shot-b.png";
   if (!clank::m2::TakeScreenshot(r, shot_b)) return 1;
-  auto same = clank::m2::CompareImages(path, shot_b, 0.0);
-  if (!same || !*same) return 1;
+  auto different = clank::m2::CompareImages(path, shot_b, 0.0);
+  if (!different || *different) return 1;
   if (clank::m2::CompareImages(path, "/tmp/m2-selftest-nope.png", 1.0)) return 1;
   const std::string not_png = "/tmp/m2-selftest-notpng.txt";
   {
