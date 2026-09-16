@@ -74,6 +74,9 @@ int Run(int argc, char** argv, const Config& cfg,
     SetTargetFPS(60);
   }
   auto state = make(flags->seed);
+  // WHY run-trace: Clear() repaints when a window is ready, so the helper never clears after
+  // BeginFrame; the 3D log therefore traces the whole run instead of one frame.
+  auto renderer = clank::m2::Create();
   auto renderer = clank::m2::Create();
   Context ctx{&playback, flags->headless, !flags->replay.empty()};
   clank::m1::Stepper stepper(1.0 / 60.0);
@@ -102,8 +105,6 @@ int Run(int argc, char** argv, const Config& cfg,
     const bool done = limit >= 0 && stepper.next() == limit;
     if (!flags->headless) {
       clank::m1::BeginFrame(12, 19, 30, 255);
-      // WHY per-frame Clear: the 3D log mirrors DrawLog frame semantics for agent readers.
-      clank::m2::Clear(renderer, {0, 0, 0, 0});
       draw(*state, renderer);
       DrawRectangle(0, 0, 1280, 108, {12, 19, 30, 255});
       DrawText(cfg.header, 40, 22, 18, cfg.accent);
