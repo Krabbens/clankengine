@@ -292,6 +292,34 @@ std::expected<std::vector<WorldTransform>, std::string> ResolveWorldTransforms(c
   return world;
 }
 
+std::expected<std::vector<int>, std::string> ResolveComponents(
+    const Scene& scene, std::span<const Component> components, int owner) {
+  for (size_t i = 0; i < scene.entities.size(); ++i)
+    for (size_t j = 0; j < i; ++j)
+      if (scene.entities[j].id == scene.entities[i].id)
+        return std::unexpected("duplicate entity id " + std::to_string(scene.entities[i].id));
+  auto find_entity = [&](int id) {
+    for (const Entity& entity : scene.entities)
+      if (entity.id == id) return true;
+    return false;
+  };
+  if (!find_entity(owner))
+    return std::unexpected("missing component owner " + std::to_string(owner));
+
+  std::vector<int> ids;
+  for (size_t i = 0; i < components.size(); ++i) {
+    const Component& component = components[i];
+    if (component.type.empty()) return std::unexpected("empty component type");
+    if (!find_entity(component.owner))
+      return std::unexpected("missing component owner " + std::to_string(component.owner));
+    for (size_t j = 0; j < i; ++j)
+      if (components[j].id == component.id)
+        return std::unexpected("duplicate component id " + std::to_string(component.id));
+    if (component.owner == owner) ids.push_back(component.id);
+  }
+  return ids;
+}
+
 std::expected<Scene, std::string> LoadJson(const std::string& text) {
   Cur c{text.data(), text.data() + text.size()};
   Scene s;

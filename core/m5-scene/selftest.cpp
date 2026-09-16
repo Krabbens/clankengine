@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstdio>
+#include <utility>
 
 #include "m5/scene.hpp"
 int main() {
@@ -50,6 +51,34 @@ int main() {
   auto invalid_parent = tree;
   invalid_parent.entities[1].parent = -2;
   if (clank::m5::ResolveWorldTransforms(invalid_parent)) return 1;
+  const std::vector<clank::m5::Component> components = {
+      {100, 11, "Sprite"}, {101, 10, "Health"}, {102, 11, "Collider"}};
+  auto actor_components = clank::m5::ResolveComponents(tree, components, 11);
+  if (!actor_components || *actor_components != std::vector<int>{100, 102}) return 1;
+  auto reordered_tree = tree;
+  std::swap(reordered_tree.entities[0], reordered_tree.entities[1]);
+  auto reordered_components = clank::m5::ResolveComponents(reordered_tree, components, 11);
+  if (!reordered_components || *reordered_components != std::vector<int>{100, 102}) return 1;
+  auto reordered_registry = components;
+  std::swap(reordered_registry[0], reordered_registry[2]);
+  auto input_order = clank::m5::ResolveComponents(tree, reordered_registry, 11);
+  if (!input_order || *input_order != std::vector<int>{102, 100}) return 1;
+  if (clank::m5::ResolveComponents(tree, components, 99)) return 1;
+  auto missing_owner = components;
+  missing_owner[0].owner = 99;
+  if (clank::m5::ResolveComponents(tree, missing_owner, 11)) return 1;
+  auto duplicate_component = components;
+  duplicate_component[2].id = duplicate_component[0].id;
+  if (clank::m5::ResolveComponents(tree, duplicate_component, 11)) return 1;
+  auto duplicate_component_cross_owner = components;
+  duplicate_component_cross_owner[1].id = duplicate_component_cross_owner[0].id;
+  if (clank::m5::ResolveComponents(tree, duplicate_component_cross_owner, 11)) return 1;
+  auto duplicate_actor = tree;
+  duplicate_actor.entities[2].id = 11;
+  if (clank::m5::ResolveComponents(duplicate_actor, components, 11)) return 1;
+  auto empty_type = components;
+  empty_type[1].type.clear();
+  if (clank::m5::ResolveComponents(tree, empty_type, 11)) return 1;
   // Any key order, extra whitespace, version 1, \u escapes.
   auto reord = clank::m5::LoadJson(
       "{ \"seed\" : 7 , \"entities\" : [ { \"sy\" : 1 , \"sx\" : 1 , \"angle\" : 0 , "
