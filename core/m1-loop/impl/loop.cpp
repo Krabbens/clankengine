@@ -54,8 +54,6 @@ void CloseWindow() {
   if (::IsWindowReady()) ::CloseWindow();
 }
 
-bool WindowOpen() { return ::IsWindowReady(); }
-
 bool ShouldClose() {
   // WHY: WindowShouldClose without a window must read as false so headless stays idle.
   if (!::IsWindowReady()) return false;

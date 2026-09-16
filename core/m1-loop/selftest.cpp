@@ -1,13 +1,9 @@
-#include "m1/loop.hpp"
-
 #include <cstdio>
+
+#include "m1/loop.hpp"
 
 int main() {
   // WHY: windowed code is verified by compile+link only; CI has no display so never open here.
-  if (clank::m1::WindowOpen()) {
-    std::fprintf(stderr, "m1: WindowOpen want false headless\n");
-    return 1;
-  }
   if (clank::m1::ShouldClose()) {
     std::fprintf(stderr, "m1: ShouldClose want false headless\n");
     return 1;
