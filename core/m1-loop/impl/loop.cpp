@@ -74,35 +74,4 @@ void EndFrame() {
   if (::IsWindowReady()) ::EndDrawing();
 }
 
-std::expected<void, std::string> RunWindowed(const LoopConfig& loop, const WindowConfig& win,
-                                             const UpdateFn& update, const DrawFn& draw) {
-  // WHY: non-positive dt would divide by zero in the accumulator, so fail before opening.
-  if (loop.dt <= 0.0) return std::unexpected(std::string("m1: bad dt"));
-  // WHY: fail fast when already open so ownership stays with the caller.
-  if (::IsWindowReady()) return std::unexpected(std::string("m1: window already open"));
-  std::expected<void, std::string> opened = OpenWindow(win);
-  if (!opened) return opened;
-  // WHY: leave pacing to raylib default vsync instead of SetTargetFPS so timing stays in one place.
-  Stepper stepper(loop.dt);
-  double acc = 0.0;
-  int rendered = 0;
-  while (rendered < loop.max_frames && !ShouldClose()) {
-    acc += static_cast<double>(::GetFrameTime());
-    // WHY: clamp accumulator to 5 steps so a stalled frame cannot spiral into catch-up debt.
-    const double cap = 5.0 * loop.dt;
-    if (acc > cap) acc = cap;
-    int budget = static_cast<int>(acc / loop.dt);
-    if (budget > 5) budget = 5;
-    if (budget > 0) {
-      stepper.Advance(budget, update);
-      acc -= static_cast<double>(budget) * loop.dt;
-    }
-    // WHY: draw owns the BeginFrame/EndFrame pair so callers pick the clear color.
-    if (draw) draw();
-    ++rendered;
-  }
-  CloseWindow();
-  return {};
-}
-
 }  // namespace clank::m1
