@@ -125,6 +125,39 @@ const Body* FindBody(const World* world, b2BodyId id) {
   return nullptr;
 }
 
+struct AabbQueryContext {
+  const World* world = nullptr;
+  b2AABB aabb{};
+  std::vector<const Body*> candidates{};
+};
+
+bool QueryAabbCallback(b2ShapeId shape, void* context) {
+  auto* query = static_cast<AabbQueryContext*>(context);
+  // WHY: Box2D's dynamic tree uses fat AABBs, so narrow the result to the current shape AABB.
+  if (!b2Shape_IsValid(shape) || !b2AABB_Overlaps(b2Shape_GetAABB(shape), query->aabb)) return true;
+  const Body* body = FindBody(query->world, b2Shape_GetBody(shape));
+  if (body != nullptr && std::find(query->candidates.begin(), query->candidates.end(), body) ==
+                             query->candidates.end())
+    query->candidates.push_back(body);
+  return true;
+}
+
+std::vector<const Body*> QueryAabb(const World* world, Aabb aabb) {
+  std::vector<const Body*> out;
+  if (world == nullptr) return out;
+  const b2AABB query_aabb = {{aabb.lower.x, aabb.lower.y}, {aabb.upper.x, aabb.upper.y}};
+  if (!b2IsValidAABB(query_aabb)) return out;
+
+  AabbQueryContext context{world, query_aabb};
+  b2World_OverlapAABB(world->id, query_aabb, b2DefaultQueryFilter(), QueryAabbCallback, &context);
+  // WHY: Box2D callback order is unspecified; facade order is world->bodies creation order.
+  for (const Body* body : world->bodies)
+    if (std::find(context.candidates.begin(), context.candidates.end(), body) !=
+        context.candidates.end())
+      out.push_back(body);
+  return out;
+}
+
 std::vector<TouchEvent> GetTouches(World* world) {
   std::vector<TouchEvent> out;
   if (world == nullptr) return out;
