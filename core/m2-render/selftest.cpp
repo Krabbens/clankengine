@@ -66,6 +66,20 @@ int main() {
   if (clank::m2::DrawLogCount(r) != 0 || clank::m2::Draw3DLogCount(r) != 0) return 1;
   clank::m2::DrawRect(r, 0, 0, 1, 1, white);
   if (clank::m2::DrawLogCount(r) != 1) return 1;
+  // WHY params over pixels: checker identity is cells plus two colors, not raster output.
+  clank::m2::Texture bad_tex{};
+  clank::m2::DrawCubeTextured(r, 0, 0, 0, 1, 1, 1, bad_tex, white);
+  clank::m2::Texture checker = clank::m2::LoadChecker(0, white, white);
+  if (checker.id < 0) return 1;
+  clank::m2::DrawCubeTextured(r, 0, 0, 0, 2, 2, 2, checker, white);
+  if (clank::m2::Draw3DLogCount(r) != 2) return 1;
+  const auto* t0 = clank::m2::Draw3DLogAt(r, 0);
+  const auto* t1 = clank::m2::Draw3DLogAt(r, 1);
+  if (!t0 || !t1 || t0->tex != -1 || t1->tex != checker.id) return 1;
+  clank::m2::UnloadTexture(checker);
+  clank::m2::UnloadTexture(checker);
+  clank::m2::UnloadTexture(bad_tex);
+  if (checker.id >= 0) return 1;
   // Rasterized headless frames compare by pixels; bad inputs are errors, not false.
   const std::string shot_b = "/tmp/m2-selftest-shot-b.png";
   if (!clank::m2::TakeScreenshot(r, shot_b)) return 1;

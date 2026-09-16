@@ -82,6 +82,7 @@ struct Game {
   Enemy enemies[3]{};
   Rupee gems[5]{};
   clank::m0::Rng rng{};
+  clank::m2::Texture grass{};
   clank::m2::Audio audio{};
   clank::m2::Sfx pickup{};
   clank::m2::Sfx sword{};
@@ -94,6 +95,8 @@ struct Game {
     pickup = clank::m2::LoadTone(audio, 880, 90, 0);
     sword = clank::m2::LoadTone(audio, 180, 140, 1);
     fanfare = clank::m2::LoadTone(audio, 660, 350, 0);
+    // WHY checker grass: procedural pattern, no binary assets, deterministic on every backend.
+    grass = clank::m2::LoadChecker(8, {24, 42, 32, 255}, {34, 62, 44, 255});
     const float bx[5] = {-3.0f, 3.0f, 0.0f, -4.0f, 4.0f};
     const float bz[5] = {3.0f, 3.0f, 0.0f, -3.0f, 2.0f};
     for (int i = 0; i < 5; ++i) {
@@ -116,6 +119,7 @@ struct Game {
     clank::m2::UnloadSfx(audio, pickup);
     clank::m2::UnloadSfx(audio, sword);
     clank::m2::UnloadSfx(audio, fanfare);
+    clank::m2::UnloadTexture(grass);
     clank::m2::CloseAudio(audio);
   }
 
@@ -205,8 +209,8 @@ struct Game {
     namespace m2 = clank::m2;
     const m2::Camera cam{{0, 14, 10}, {0, 0, 0.3f}, {0, 1, 0}, 45};
     m2::BeginMode3D(renderer, cam);
-    m2::DrawCube(renderer, 0, -0.15f, 0, 14.4f, 0.3f, 10.4f, {24, 42, 32, 255});
-    m2::DrawCube(renderer, 0, -0.12f, 0, 13.6f, 0.3f, 9.6f, {34, 62, 44, 255});
+    m2::DrawCubeTextured(renderer, 0, -0.15f, 0, 14.4f, 0.3f, 10.4f, grass, {255, 255, 255, 255});
+    m2::DrawCubeTextured(renderer, 0, -0.12f, 0, 13.6f, 0.3f, 9.6f, grass, {255, 255, 255, 255});
     for (const Wall& w : kWalls) {
       m2::DrawCube(renderer, w.cx, 0.5f, w.cz, w.hx * 2, 1.0f, w.hz * 2, {96, 110, 128, 255});
       m2::DrawCubeWires(renderer, w.cx, 0.5f, w.cz, w.hx * 2, 1.0f, w.hz * 2, {160, 180, 200, 255});

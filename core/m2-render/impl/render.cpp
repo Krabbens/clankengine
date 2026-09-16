@@ -55,6 +55,43 @@ void Push3D(const Renderer& r, Draw3DEntry e) {
 // WHY: public header stays stdlib-only so translate to raylib color at the boundary.
 ::Color ToRay(Color c) { return ::Color{c.r, c.g, c.b, c.a}; }
 
+// WHY one registry: textures outlive renderers (Game owns them); ids stay valid headless.
+struct TexEntry {
+  int cells = 8;
+  Color a{};
+  Color b{};
+  ::Texture2D gpu{};
+  bool uploaded = false;
+};
+std::unordered_map<int, TexEntry>& TexBackends() {
+  static std::unordered_map<int, TexEntry> backends;
+  return backends;
+}
+int& NextTexId() {
+  static int next = 0;
+  return next;
+}
+const TexEntry* FindTex(int id) {
+  if (id < 0) return nullptr;
+  auto it = TexBackends().find(id);
+  return it != TexBackends().end() ? &it->second : nullptr;
+}
+unsigned char MulChannel(unsigned char c, unsigned char t) {
+  return static_cast<unsigned char>(c * t / 255);
+}
+Color TintColor(Color c, Color tint) {
+  return Color{MulChannel(c.r, tint.r), MulChannel(c.g, tint.g), MulChannel(c.b, tint.b), tint.a};
+}
+void RasterChecker(::Image* image, int x, int y, int w, int h, const TexEntry& tex, Color tint) {
+  const int n = tex.cells > 0 ? tex.cells : 1;
+  for (int j = 0; j < n; ++j)
+    for (int i = 0; i < n; ++i) {
+      const Color cell = (i + j) % 2 == 0 ? tex.a : tex.b;
+      ::ImageDrawRectangle(image, x - w / 2 + i * w / n, y - h / 2 + j * h / n,
+                           (i + 1) * w / n - i * w / n, (j + 1) * h / n - j * h / n,
+                           ToRay(TintColor(cell, tint)));
+    }
+}
 }  // namespace
 
 Renderer Create() {
@@ -298,9 +335,17 @@ std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::st
     const int height = std::max(1, static_cast<int>(std::lround(std::abs(e.c) * 2 * scale)));
     const int radius = std::max(1, static_cast<int>(std::lround(std::abs(e.a) * scale)));
     switch (e.kind) {
-      case Draw3DKind::Cube:
-        ::ImageDrawRectangle(&image, x - width / 2, y - height / 2, width, height, ToRay(e.color));
+      case Draw3DKind::Cube: {
+        // WHY world-space pattern: headless has no UV state, so the checker evaluates in X/Z
+        // like the projection itself; GPU path does true UV mapping instead (documented split).
+        const TexEntry* tex = FindTex(e.tex);
+        if (tex == nullptr)
+          ::ImageDrawRectangle(&image, x - width / 2, y - height / 2, width, height,
+                               ToRay(e.color));
+        else
+          RasterChecker(&image, x, y, width, height, *tex, e.color);
         break;
+      }
       case Draw3DKind::CubeWires:
         ::ImageDrawRectangleLines(
             &image,
@@ -494,6 +539,52 @@ void UnloadSfx(Audio& audio, const Sfx& sfx) {
   if (sound == it->second.sounds.end()) return;
   if (it->second.device_ok) ::UnloadSound(sound->second);
   it->second.sounds.erase(sound);
+}
+
+Texture LoadChecker(int cells, Color a, Color b) {
+  Texture texture{.id = NextTexId()};
+  TexBackends()[texture.id] = TexEntry{cells > 0 ? cells : 1, a, b};
+  return texture;
+}
+
+void UnloadTexture(Texture& texture) {
+  if (texture.id < 0) return;
+  auto it = TexBackends().find(texture.id);
+  if (it == TexBackends().end()) return;
+  // WHY window check: GPU resources die with their context; headless there is nothing to free.
+  if (it->second.uploaded && ::IsWindowReady()) ::UnloadTexture(it->second.gpu);
+  TexBackends().erase(it);
+  texture.id = -1;
+}
+
+void DrawCubeTextured(Renderer& r, float x, float y, float z, float sx, float sy, float sz,
+                      Texture texture, Color tint) {
+  Push3D(r, Draw3DEntry{.kind = Draw3DKind::Cube,
+                        .x = x,
+                        .y = y,
+                        .z = z,
+                        .a = sx,
+                        .b = sy,
+                        .c = sz,
+                        .tex = texture.id,
+                        .color = tint});
+  if (!::IsWindowReady()) return;
+  const TexEntry* tex = FindTex(texture.id);
+  if (tex == nullptr) {
+    ::DrawCube(::Vector3{x, y, z}, sx, sy, sz, ToRay(tint));
+    return;
+  }
+  if (!tex->uploaded) {
+    // WHY lazy upload: samples construct (and load textures) headless; GPU exists only with one.
+    ::Image img = ::GenImageChecked(64, 64, tex->cells, tex->cells, ToRay(tex->a), ToRay(tex->b));
+    TexBackends()[texture.id].gpu = ::LoadTextureFromImage(img);
+    ::UnloadImage(img);
+    TexBackends()[texture.id].uploaded = true;
+  }
+  // WHY rlSetTexture: plain DrawCube emits full-face UVs, so binding reuses it as textured cube.
+  ::rlSetTexture(TexBackends()[texture.id].gpu.id);
+  ::DrawCube(::Vector3{x, y, z}, sx, sy, sz, ToRay(tint));
+  ::rlSetTexture(0);
 }
 
 }  // namespace clank::m2
