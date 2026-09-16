@@ -18,6 +18,7 @@ if command -v xvfb-run >/dev/null 2>&1; then
 else
   "$binary" --shot-after "$frame" --dump-scene scene.json --replay "$replay" --seed 42
 fi
+cp "${name}_frame${frame}.png" "/tmp/${name}_frame${frame}.png"
 "$compare" "${name}_frame${frame}.png" "$golden"
 cp scene.json windowed.json
 "$binary" --headless --shot-after "$frame" --dump-scene scene.json --replay "$replay" --seed 42

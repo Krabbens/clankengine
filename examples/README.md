@@ -27,6 +27,7 @@ Run from the repository root; PNGs are written to the current directory:
 ```
 
 `--shot-after N` exits after exactly N ticks (0 captures the initial state).
+Pause/step controls apply to windowed sessions without `--shot-after`.
 Replay replaces live movement/drop input. Without a frame limit, headless runs
 240 ticks. Output paths go to stdout; update timing p50/p95/p99 goes to stderr.
 The same seed and replay reproduce scene JSON on the same build/backend.
