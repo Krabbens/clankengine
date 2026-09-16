@@ -69,7 +69,7 @@ target_link_libraries(minimal PRIVATE m5_scene clank_warnings)
 
 include(CTest)
 
-foreach(sample pegboard marble_tray)
+foreach(sample pegboard marble_tray zelda)
   add_executable(${sample} examples/${sample}.cpp)
   target_link_libraries(${sample} PRIVATE m0_foundation m1_loop m2_render
     m5_scene m6_input clank_warnings)
@@ -100,6 +100,8 @@ if(BUILD_TESTING)
         ${CMAKE_SOURCE_DIR}/examples/replays/drop.clk ${frame})
     endif()
   endforeach()
+  add_test(NAME zelda-smoke COMMAND zelda --headless --shot-after 60 --dump-scene
+    ${CMAKE_BINARY_DIR}/zelda_scene.json --seed 42)
 endif()
 
 function(clank_selftest name lib src inc)
