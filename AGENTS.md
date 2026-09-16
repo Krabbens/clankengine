@@ -100,7 +100,7 @@ Goal: two agents NEVER work on the same module.
   `{"type":"allow-big|allow-cross|allow-growth","reason":"...","extra_bench":"..."}`
   Empty reason = CI fail.
 * Lifecycle:
-  1. `tools/clank-claim claim m3 --agent agent-02 --topic box2d-wrap`
+  1. `tools/clank-claim claim m3 --agent agent-02 --topic box2d-wrap --intent "Wrap Box2D world step"`
   2. work (small commits, see §6)
   3. `tools/clank-claim heartbeat m3 --agent agent-02` every ~15 min
   4. open PR, pass CI
@@ -122,7 +122,7 @@ Each agent MUST create and use a dedicated worktree before claiming a module:
 git fetch origin main
 git worktree add ../clankengine-<agent>-<topic> -b a/m3-box2d-wrap origin/main
 cd ../clankengine-<agent>-<topic>
-tools/clank-claim claim m3 --agent <agent> --topic box2d-wrap
+tools/clank-claim claim m3 --agent <agent> --topic box2d-wrap --intent "Wrap Box2D world step"
 ```
 
 `tools/clank-claim` keeps an untracked mutex in the shared `.git` directory
