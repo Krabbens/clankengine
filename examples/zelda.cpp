@@ -236,16 +236,17 @@ struct Game {
       m2::DrawSphere(renderer, px + fx * 1.1f, 0.6f, pz + fz * 1.1f, 0.16f, {255, 240, 150, 255});
     }
     m2::EndMode3D(renderer);
-    DrawText("03 / ZELDA", 44, 146, 20, {226, 235, 244, 255});
-    DrawText(TextFormat("HP %.0f/5   RUPEE %d/5   %s", static_cast<double>(hp), rupees,
-                        status == 1   ? "WIN!"
-                        : status == 2 ? "DEAD"
-                        : open        ? "EXIT OPEN"
-                                      : ""),
-             44, 184, 18, {135, 158, 181, 255});
-    DrawText("Find 5 rupees, reach gold pad", 44, 210, 18, {135, 158, 181, 255});
-    DrawText("3D TOP-DOWN", 1000, 146, 20, {70, 218, 195, 255});
-    DrawText("Arrows/WASD move, Space sword", 1000, 184, 18, {135, 158, 181, 255});
+    m2::DrawText(renderer, "03 / ZELDA", 44, 146, 20, {226, 235, 244, 255});
+    m2::DrawText(renderer,
+                 TextFormat("HP %.0f/5   RUPEE %d/5   %s", static_cast<double>(hp), rupees,
+                            status == 1   ? "WIN!"
+                            : status == 2 ? "DEAD"
+                            : open        ? "EXIT OPEN"
+                                          : ""),
+                 44, 184, 18, {135, 158, 181, 255});
+    m2::DrawText(renderer, "Find 5 rupees, reach gold pad", 44, 210, 18, {135, 158, 181, 255});
+    m2::DrawText(renderer, "3D TOP-DOWN", 1000, 146, 20, {70, 218, 195, 255});
+    m2::DrawText(renderer, "Arrows/WASD move, Space sword", 1000, 184, 18, {135, 158, 181, 255});
   }
 
   clank::m5::Scene Scene(int seed) const {

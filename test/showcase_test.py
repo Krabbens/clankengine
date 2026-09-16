@@ -25,7 +25,11 @@ with tempfile.TemporaryDirectory() as temp:
             command += ["--replay", replay]
         result = subprocess.run(command, cwd=root, capture_output=True, text=True, check=True)
         assert result.stdout.splitlines() == [f"{name}_frame{frames}.png", "scene.json"]
-        assert (root / f"{name}_frame{frames}.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+        png = (root / f"{name}_frame{frames}.png").read_bytes()
+        assert png.startswith(b"\x89PNG\r\n\x1a\n")
+        assert int.from_bytes(png[16:20], "big") == 1280
+        assert int.from_bytes(png[20:24], "big") == 720
+        assert len(png) > 1000, "screenshot must contain a rendered framebuffer"
         text = (root / "scene.json").read_text()
         scene = json.loads(text)
         assert set(scene) == top_required

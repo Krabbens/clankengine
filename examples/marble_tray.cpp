@@ -67,10 +67,15 @@ struct MarbleTray {
     }
     m2::DrawSphereWires(renderer, emitter, 7, 0, .5f, 8, 12, pal[0]);
     m2::EndMode3D(renderer);
-    DrawText("02 / DEPTH", 44, 146, 20, showcase::ink);
-    DrawText("30 seeded spheres\nStatic box tray\n3-axis collision", 44, 184, 18, showcase::muted);
-    DrawText("BOX3D ALPHA", 1000, 146, 20, showcase::colors[1]);
-    DrawText("Physics: m4 facade\nView: raylib 3D", 1000, 184, 18, showcase::muted);
+    m2::DrawText(renderer, "02 / DEPTH", 44, 146, 20,
+                 {showcase::ink.r, showcase::ink.g, showcase::ink.b, showcase::ink.a});
+    m2::DrawText(renderer, "30 seeded spheres\nStatic box tray\n3-axis collision", 44, 184, 18,
+                 {showcase::muted.r, showcase::muted.g, showcase::muted.b, showcase::muted.a});
+    m2::DrawText(renderer, "BOX3D ALPHA", 1000, 146, 20,
+                 {showcase::colors[1].r, showcase::colors[1].g, showcase::colors[1].b,
+                  showcase::colors[1].a});
+    m2::DrawText(renderer, "Physics: m4 facade\nView: raylib 3D", 1000, 184, 18,
+                 {showcase::muted.r, showcase::muted.g, showcase::muted.b, showcase::muted.a});
   }
   clank::m5::Scene Scene(int seed, float emitter) const {
     clank::m5::Scene scene{seed, {}};

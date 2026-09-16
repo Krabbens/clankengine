@@ -74,8 +74,6 @@ int Run(int argc, char** argv, const Config& cfg,
     SetTargetFPS(60);
   }
   auto state = make(flags->seed);
-  // WHY run-trace: Clear() repaints when a window is ready, so the helper never clears after
-  // BeginFrame; the 3D log therefore traces the whole run instead of one frame.
   auto renderer = clank::m2::Create();
   Context ctx{&playback, flags->headless, !flags->replay.empty()};
   clank::m1::Stepper stepper(1.0 / 60.0);
@@ -102,29 +100,25 @@ int Run(int argc, char** argv, const Config& cfg,
     }
     if (limit < 0 || stepper.next() < limit) stepper.Advance(1, update);
     const bool done = limit >= 0 && stepper.next() == limit;
-    if (!flags->headless) {
-      clank::m1::BeginFrame(12, 19, 30, 255);
-      draw(*state, renderer);
-      // WHY convert once: Config keeps raylib colors for raw callers, the facade takes its own.
-      const clank::m2::Color accent{cfg.accent.r, cfg.accent.g, cfg.accent.b, cfg.accent.a};
-      const clank::m2::Color ink{cfg.ink.r, cfg.ink.g, cfg.ink.b, cfg.ink.a};
-      const clank::m2::Color muted{cfg.muted.r, cfg.muted.g, cfg.muted.b, cfg.muted.a};
-      clank::m2::DrawRect(renderer, 0, 0, 1280, 108, {12, 19, 30, 255});
-      clank::m2::DrawText(renderer, cfg.header, 40, 22, 18, accent);
-      clank::m2::DrawText(renderer, cfg.title, 40, 48, 34, ink);
-      clank::m2::DrawText(renderer, cfg.subtitle, 40, 88, 16, muted);
-      clank::m2::DrawRect(renderer, 0, 660, 1280, 60, {12, 19, 30, 255});
-      clank::m2::DrawText(renderer, cfg.controls, 40, 684, 18, ink);
-      clank::m2::DrawText(
-          renderer,
-          TextFormat("%s  /  %04d", stepper.paused() ? "PAUSED" : "60 HZ", stepper.next()), 1030,
-          684, 18, accent);
-    }
+    if (!flags->headless) clank::m1::BeginFrame(12, 19, 30, 255);
+    clank::m2::Clear(renderer, {12, 19, 30, 255});
+    draw(*state, renderer);
+    // WHY convert once: Config keeps raylib colors for raw callers, the facade takes its own.
+    const clank::m2::Color accent{cfg.accent.r, cfg.accent.g, cfg.accent.b, cfg.accent.a};
+    const clank::m2::Color ink{cfg.ink.r, cfg.ink.g, cfg.ink.b, cfg.ink.a};
+    const clank::m2::Color muted{cfg.muted.r, cfg.muted.g, cfg.muted.b, cfg.muted.a};
+    clank::m2::DrawRect(renderer, 0, 0, 1280, 108, {12, 19, 30, 255});
+    clank::m2::DrawText(renderer, cfg.header, 40, 22, 18, accent);
+    clank::m2::DrawText(renderer, cfg.title, 40, 48, 34, ink);
+    clank::m2::DrawText(renderer, cfg.subtitle, 40, 88, 16, muted);
+    clank::m2::DrawRect(renderer, 0, 660, 1280, 60, {12, 19, 30, 255});
+    clank::m2::DrawText(renderer, cfg.controls, 40, 684, 18, ink);
+    clank::m2::DrawText(
+        renderer, TextFormat("%s  /  %04d", stepper.paused() ? "PAUSED" : "60 HZ", stepper.next()),
+        1030, 684, 18, accent);
     if (done && flags->shot_after >= 0) {
       const std::string path = std::string(cfg.name) + "_frame" + std::to_string(limit) + ".png";
-      auto renderer = clank::m2::Create();
       auto shot = clank::m2::TakeScreenshot(renderer, path);
-      clank::m2::Destroy(renderer);
       if (!shot)
         result = Fail(shot.error());
       else
