@@ -7,7 +7,8 @@ namespace clank::m5 {
 struct Entity {
   int id = 0;
   std::string name;
-  float x = 0, y = 0, angle = 0, sx = 1, sy = 1;
+  // WHY z last: positional initializers in examples keep meaning, z defaults 0.
+  float x = 0, y = 0, angle = 0, sx = 1, sy = 1, z = 0;
 };
 struct Scene {
   int seed = 42;

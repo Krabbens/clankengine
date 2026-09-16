@@ -1,9 +1,8 @@
 # Mission (standing, decided 2026-09-16)
 
-> Local continuity note. UNTRACKED until it rides along with a module PR:
-> `claim-guard` ignores non-module paths for module mapping and `loc-guard`
-> does not count `.agents/`, so bundling this file into a module PR is CI-safe.
-> Never open a PR with only this file (no module mapping = guard fail).
+> Standing agent notes, tracked in repo. Rides along with a module PR, never
+> alone: `claim-guard` ignores non-module paths for module mapping and
+> `loc-guard` does not count `.agents/`, so bundling is CI-safe.
 
 ## 1. Agent-first includes GitHub
 
@@ -29,6 +28,19 @@ Acceptance criterion for any change, beyond green CI:
   deterministic seed? Editor-only / human-only = reject.
 - Did `core/` total stay flat or shrink? Deleting code counts as a feature.
 
-Wave backlog (in order): observability (m2 compare, m5 schema v1, m7 dump/diff,
-m8 goldens) → physics events/queries (m3/m4) → live input + replay wiring (m6)
-→ render unification through m2 DrawLog.
+Wave backlog (in order): observability (m2 compare done PR #13, m5 schema v1,
+m7 dump/diff, m8 goldens) → physics events/queries (m3/m4) → live input +
+replay wiring (m6) → render unification through m2 DrawLog.
+
+## 3. Golden discipline (I approve, so I hold the line)
+
+Goldens turn into fiction the moment approvals go blind. Binding rules:
+
+- Regen only with a pixel-level note of what changed and why it is correct.
+  "Update golden to make CI pass" is never a reason.
+- Every image diff is actually looked at before merge. `fraction <= 2%`
+  green is not an alibi.
+- Goldens come from fixed `--seed` + fixed timestep, headless. Unseeded or
+  variable-timestep goldens are rejected (AGENTS.md §10).
+- Fewer, smaller goldens beat many big ones. Each file in `test/golden/`
+  must be traceable to the exact command that produced it.
