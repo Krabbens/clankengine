@@ -34,6 +34,12 @@ int main() {
   char* bad[] = {bad0, bad1};
   if (clank::m0::ParseFlags(2, bad).has_value()) return Fail("unknown-flag");
 
+  char fbad_seed[] = "--seed";
+  char partial_seed[] = "42junk";
+  char* partial[] = {prog, fbad_seed, partial_seed};
+  auto partial_result = clank::m0::ParseFlags(3, partial);
+  if (!partial_result.has_value() || partial_result->seed != 42) return Fail("partial-integer");
+
   clank::m0::Rng a, b;
   clank::m0::Seed(a, 1234);
   clank::m0::Seed(b, 1234);

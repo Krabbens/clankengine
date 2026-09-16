@@ -53,7 +53,8 @@ int ParseIntOr(const char* s, int fallback) {
   const char* end = s;
   while (*end != '\0') ++end;
   int v = fallback;
-  return std::from_chars(s, end, v).ec == std::errc() ? v : fallback;
+  const auto [parsed, error] = std::from_chars(s, end, v);
+  return error == std::errc() && parsed == end ? v : fallback;
 }
 }  // namespace
 
