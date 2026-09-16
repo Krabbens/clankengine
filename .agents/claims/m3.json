@@ -1,0 +1,13 @@
+{
+  "module": "m3",
+  "agent": "codex-m3-query-aabb",
+  "branch": "a/m3-query-aabb",
+  "started_utc": "2026-09-16T23:36:35Z",
+  "heartbeat_utc": "2026-09-16T23:41:48Z",
+  "ttl_min": 30,
+  "intent": "Add deterministic Box2D QueryAabb body wrappers and boundary/static/dynamic selftest",
+  "paths": [
+    "core/m3-physics2d/"
+  ],
+  "exception": null
+}

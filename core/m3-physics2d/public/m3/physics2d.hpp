@@ -10,6 +10,11 @@ struct Vec2 {
   float y = 0.0f;
 };
 
+struct Aabb {
+  Vec2 lower{};
+  Vec2 upper{};
+};
+
 enum class BodyType { Static, Dynamic };
 
 enum class ShapeKind { Circle, Box };
@@ -43,6 +48,10 @@ void Step(World* world, float dt);
 Vec2 GetPosition(const Body* body);
 float GetAngle(const Body* body);
 Vec2 GetVelocity(const Body* body);
+// WHY const result: queries do not mutate bodies; results follow creation order, not Box2D tree
+// order. Box2D reports broad-phase candidates with a speculative margin; the narrowest safe fix is
+// an AABB check in the callback, while retaining Box2D's conservative near-edge semantics.
+std::vector<const Body*> QueryAabb(const World* world, Aabb aabb);
 // WHY snapshot, not drain: Box2D keeps events until the next Step, so this reflects the last step.
 struct TouchEvent {
   const Body* a = nullptr;
