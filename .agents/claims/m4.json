@@ -1,0 +1,13 @@
+{
+  "module": "m4",
+  "agent": "agent-zelda",
+  "branch": "a/m4-contact-events",
+  "started_utc": "2026-09-16T05:29:30Z",
+  "heartbeat_utc": "2026-09-16T05:30:55Z",
+  "ttl_min": 30,
+  "intent": "",
+  "paths": [
+    "core/m4-physics3d/"
+  ],
+  "exception": null
+}
