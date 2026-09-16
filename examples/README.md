@@ -32,9 +32,11 @@ Replay replaces live movement/drop input. Without a frame limit, headless runs
 240 ticks. Output paths go to stdout; update timing p50/p95/p99 goes to stderr.
 The same seed and replay reproduce scene JSON on the same build/backend.
 
-**Current limits:** headless screenshots are the renderer's 1x1 placeholder.
-For real pixels on Linux, prefix the windowed command with `xvfb-run -a`.
-Views use raylib directly; m2 provides screenshots but has no 3D drawing API.
+Headless screenshots rasterize the m2 2D draw log into a deterministic 1280x720
+PNG; text remains in the draw log because raylib's default font needs a GPU
+context. For real 3D pixels on Linux, prefix the windowed command with
+`xvfb-run -a`. The m2 facade records 3D calls for inspection but does not yet
+rasterize them headlessly.
 The 3D dump uses paired `.xy` and `.xz` entities to preserve X/Y/Z positions
 and dimensions in the current 2D scene schema. It is an observation, not a
 physics checkpoint. Dynamic spheres avoid claiming full rotation support
