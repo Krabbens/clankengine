@@ -65,20 +65,6 @@ void Destroy(Renderer& r) {
   r.valid = false;
 }
 
-void Begin(Renderer& r) {
-  (void)r;
-  // WHY: headless runs have no window; only mirror to GPU once m1 owns one.
-  // Precondition: ::IsWindowReady() must be true before ::BeginDrawing().
-  if (::IsWindowReady()) ::BeginDrawing();
-}
-
-void End(Renderer& r) {
-  (void)r;
-  // WHY: buffer swap without a window is undefined; guard keeps headless safe.
-  // Precondition: ::IsWindowReady() must be true before ::EndDrawing().
-  if (::IsWindowReady()) ::EndDrawing();
-}
-
 void Clear(Renderer& r, Color c) {
   // WHY: DrawLog is frame truth, so Clear starts a new frame headless too.
   // Precondition: ::IsWindowReady() must be true before ::ClearBackground().

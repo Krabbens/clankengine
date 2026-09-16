@@ -33,8 +33,6 @@ struct Renderer {
 
 Renderer Create();
 void Destroy(Renderer& r);
-void Begin(Renderer& r);
-void End(Renderer& r);
 void Clear(Renderer& r, Color c);
 void DrawRect(Renderer& r, float x, float y, float w, float h, Color c);
 void DrawCircle(Renderer& r, float x, float y, float radius, Color c);

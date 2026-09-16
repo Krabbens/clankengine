@@ -6,12 +6,10 @@
 int main() {
   clank::m2::Renderer r = clank::m2::Create();
   if (!r.valid) return 1;
-  clank::m2::Begin(r);
   clank::m2::Color white{.r = 255, .g = 255, .b = 255, .a = 255};
   clank::m2::DrawRect(r, 1, 2, 3, 4, white);
   clank::m2::DrawCircle(r, 5, 6, 7, white);
   clank::m2::DrawText(r, "hi", 8, 9, 10, white);
-  clank::m2::End(r);
   if (clank::m2::DrawLogCount(r) != 3) return 1;
   const auto* e0 = clank::m2::DrawLogAt(r, 0);
   const auto* e1 = clank::m2::DrawLogAt(r, 1);
