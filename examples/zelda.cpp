@@ -207,10 +207,23 @@ struct Game {
 
   void Draw(clank::m2::Renderer& renderer) const {
     namespace m2 = clank::m2;
-    const m2::Camera cam{{0, 14, 10}, {0, 0, 0.3f}, {0, 1, 0}, 45};
+    // WHY orthographic: equal world-scale reads like a small painted diorama and keeps the
+    // combat arena legible while the camera stays fixed for replay and screenshot tests.
+    const m2::Camera cam{{0, 14, 10}, {0, 0, 0.3f}, {0, 1, 0}, 12.5f, m2::Projection::Orthographic};
+    m2::SetDirectionalLight(renderer, {{-0.45f, -1.0f, 0.35f}, {255, 244, 224, 255}, 0.25f, 0.75f});
+    m2::SetColorGrade(renderer, {255, 248, 235, 255}, 0.2f);
     m2::BeginMode3D(renderer, cam);
     m2::DrawCubeTextured(renderer, 0, -0.15f, 0, 14.4f, 0.3f, 10.4f, grass, {255, 255, 255, 255});
     m2::DrawCubeTextured(renderer, 0, -0.12f, 0, 13.6f, 0.3f, 9.6f, grass, {255, 255, 255, 255});
+    const m2::Color shadow{0, 0, 0, 100};
+    m2::DrawShadow(renderer, kExitX, 0.02f, kExitZ, 0.7f, 0.1f, shadow);
+    for (const auto& g : gems) {
+      if (!g.taken) m2::DrawShadow(renderer, g.x, 0.02f, g.z, 0.28f, 0.45f, shadow);
+    }
+    for (const auto& e : enemies) {
+      if (e.alive) m2::DrawShadow(renderer, e.x, 0.02f, e.z, 0.42f, 0.8f, shadow);
+    }
+    m2::DrawShadow(renderer, px, 0.02f, pz, 0.32f, 0.8f, shadow);
     for (const Wall& w : kWalls) {
       m2::DrawCube(renderer, w.cx, 0.5f, w.cz, w.hx * 2, 1.0f, w.hz * 2, {96, 110, 128, 255});
       m2::DrawCubeWires(renderer, w.cx, 0.5f, w.cz, w.hx * 2, 1.0f, w.hz * 2, {160, 180, 200, 255});

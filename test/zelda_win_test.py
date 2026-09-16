@@ -18,10 +18,17 @@ with tempfile.TemporaryDirectory() as temp:
                    "--replay", replay]
         result = subprocess.run(command, cwd=root, capture_output=True, text=True, check=True)
         assert result.stdout.splitlines() == [f"zelda_frame{frames}.png", "scene.json"]
-        return out.read_text()
+        shot = (root / f"zelda_frame{frames}.png").read_bytes()
+        assert shot.startswith(b"\x89PNG\r\n\x1a\n")
+        assert int.from_bytes(shot[16:20], "big") == 1280
+        assert int.from_bytes(shot[20:24], "big") == 720
+        assert len(shot) > 1000, "screenshot must contain a rendered framebuffer"
+        return out.read_text(), shot
 
-    first = run()
-    assert run() == first, "win replay must be byte-identical"
+    first, first_shot = run()
+    second, second_shot = run()
+    assert second == first, "win replay must be byte-identical"
+    assert second_shot == first_shot, "rendered screenshot must be deterministic"
     scene = json.loads(first)
     state = next(e for e in scene["entities"] if e["name"] == "state")
     assert state["y"] == 5, f"all rupees collected, got {state['y']}"
