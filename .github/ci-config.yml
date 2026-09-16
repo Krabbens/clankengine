@@ -27,6 +27,6 @@ excluded_from_limits: ["test/", ".png", ".agents/claims/"]
 deps:
   raylib: "5.5"
   box2d: "v3.1.1"
-  box3d_commit: "PIN-ME"  # TODO(m4): pin Box3D alpha commit hash on first use
+  box3d_commit: "8441b4a06d6d09dcfb0b0f704df4d847d1437b92"  # Box3D v0.1.0 alpha (2026-06-30)
   cmake_min: "3.28"
   compilers: ["clang-18", "gcc-13"]
