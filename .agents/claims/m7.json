@@ -1,0 +1,13 @@
+{
+  "module": "m7",
+  "agent": "codex-m7-python-shot",
+  "branch": "a/m7-python-shot",
+  "started_utc": "2026-09-16T23:05:29Z",
+  "heartbeat_utc": "2026-09-16T23:14:32Z",
+  "ttl_min": 30,
+  "intent": "Add portable Python shot runner and selftests for Windows",
+  "paths": [
+    "tools/m7-harness/"
+  ],
+  "exception": null
+}
