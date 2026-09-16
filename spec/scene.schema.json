@@ -1,11 +1,30 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "clankengine scene dump (stub v0)",
+  "title": "clankengine scene dump",
+  "description": "Wire shape of m5::DumpJson. CI enforces this file through test/showcase_test.py so agents can rely on dump keys without reading C++.",
   "type": "object",
   "required": ["version", "seed", "entities"],
+  "additionalProperties": false,
   "properties": {
-    "version": { "type": "integer" },
+    "version": { "type": "integer", "enum": [0, 1] },
     "seed": { "type": "integer" },
-    "entities": { "type": "array", "items": { "type": "object" } }
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "x", "y", "angle", "sx", "sy"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "x": { "type": "number" },
+          "y": { "type": "number" },
+          "angle": { "type": "number" },
+          "sx": { "type": "number" },
+          "sy": { "type": "number" },
+          "z": { "type": "number" }
+        }
+      }
+    }
   }
 }
