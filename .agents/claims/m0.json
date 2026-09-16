@@ -3,7 +3,7 @@
   "agent": "codex",
   "branch": "a/m0-strict-cli",
   "started_utc": "2026-09-16T05:34:47Z",
-  "heartbeat_utc": "2026-09-16T05:34:47Z",
+  "heartbeat_utc": "2026-09-16T05:37:22Z",
   "ttl_min": 30,
   "intent": "Reject partial CLI integers",
   "paths": [
