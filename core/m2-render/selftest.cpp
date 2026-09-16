@@ -70,6 +70,25 @@ int main() {
   std::remove(path.c_str());
   std::remove(shot_b.c_str());
   std::remove(not_png.c_str());
+  // WHY no device asserts: CI has no audio hardware, so only the silent path is provable here.
+  clank::m2::Audio audio = clank::m2::OpenAudio();
+  if (!audio.valid) return 1;
+  clank::m2::Sfx bad = clank::m2::LoadTone(audio, 440, 0, 0);
+  if (bad.id >= 0 || !bad.frames.empty()) return 1;
+  clank::m2::Sfx tone = clank::m2::LoadTone(audio, 440, 100, 0);
+  if (tone.id < 0 || tone.rate != 22050 || tone.frames.size() != 2205) return 1;
+  // WHY exact samples: integer synth is bit-exact on every platform, so assert bytes.
+  const size_t period = static_cast<size_t>(22050 / 440);
+  if (tone.frames[0] != 32767 || tone.frames[period / 2] != -32767) return 1;
+  clank::m2::Sfx saw = clank::m2::LoadTone(audio, 440, 100, 1);
+  if (saw.frames[1] <= saw.frames[0]) return 1;
+  clank::m2::PlaySfx(audio, tone);
+  clank::m2::PlaySfx(audio, bad);
+  clank::m2::UnloadSfx(audio, tone);
+  clank::m2::UnloadSfx(audio, bad);
+  clank::m2::PlaySfx(audio, tone);
+  clank::m2::CloseAudio(audio);
+  if (audio.valid) return 1;
   clank::m2::Destroy(r);
   return r.valid ? 1 : 0;
 }

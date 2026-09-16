@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <expected>
 #include <string>
+#include <vector>
 
 namespace clank::m2 {
 
@@ -89,5 +90,26 @@ std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::st
 [[nodiscard]] std::expected<bool, std::string> CompareImages(const std::string& path_a,
                                                              const std::string& path_b,
                                                              double max_diff_frac);
+
+// WHY integer synth: libm varies across platforms; square/saw buffers stay bit-exact everywhere.
+// WHY silent-sink: CI has no audio device; calls never fail, they just make no sound headless.
+struct Audio {
+  int id = -1;
+  bool valid = false;
+};
+
+struct Sfx {
+  int id = -1;
+  std::vector<short> frames{};
+  int rate = 22050;
+};
+
+Audio OpenAudio();
+void CloseAudio(Audio& audio);
+bool AudioReady(const Audio& audio);
+// wave: 0 square, 1 saw. Always synthesizes into frames; backend Sound only when a device is ready.
+Sfx LoadTone(Audio& audio, int freq_hz, int millis, int wave);
+void PlaySfx(Audio& audio, const Sfx& sfx);
+void UnloadSfx(Audio& audio, const Sfx& sfx);
 
 }  // namespace clank::m2
