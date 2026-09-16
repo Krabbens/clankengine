@@ -1,6 +1,7 @@
 #pragma once
 // WHY: header stays STDLIB-only so Box2D never leaks into dependents.
 // WHY: float angle (not b2Rot) keeps the facade tiny; backend converts via b2MakeRot.
+#include <vector>
 
 namespace clank::m3 {
 
@@ -39,5 +40,12 @@ void Step(World* world, float dt);
 Vec2 GetPosition(const Body* body);
 float GetAngle(const Body* body);
 Vec2 GetVelocity(const Body* body);
+// WHY snapshot, not drain: Box2D keeps events until the next Step, so this reflects the last step.
+struct TouchEvent {
+  const Body* a = nullptr;
+  const Body* b = nullptr;
+  bool began = true;
+};
+std::vector<TouchEvent> GetTouches(World* world);
 
 }  // namespace clank::m3
