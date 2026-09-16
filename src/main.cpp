@@ -75,19 +75,24 @@ int main(int argc, char** argv) {
     }
   } else {
     int frame = -1;
+    int draws = 0;
     auto counted = [&](clank::m1::Frame f, double dt) {
       frame = f.number;
       update(f, dt);
     };
     auto draw = [&]() {
+      ++draws;
       clank::m1::BeginFrame(20, 20, 30, 255);
       clank::m2::DrawRect(renderer, scene.entities[0].x * 60.0f, 300.0f, 40.0f, 40.0f,
                           {255, 255, 255, 255});
       if (flags.shot_after > 0 && frame == flags.shot_after - 1) {
-        // WHY inside draw: real TakeScreenshot needs an open window + active frame.
-        // WHY shot_after, not frame: headless and windowed must emit the same path.
+        // WHY loud failure: a silent no-shot wastes a whole CI cycle to diagnose.
         auto shot = clank::m2::TakeScreenshot(renderer, ShotPath(flags.shot_after));
-        if (shot) std::printf("%s\n", ShotPath(frame).c_str());
+        if (shot) {
+          std::printf("%s\n", ShotPath(flags.shot_after).c_str());
+        } else {
+          std::fprintf(stderr, "clank: shot frame=%d failed: %s\n", frame, shot.error().c_str());
+        }
       }
       clank::m1::EndFrame();
     };
@@ -97,6 +102,7 @@ int main(int argc, char** argv) {
                    ran.error().c_str());
       return 1;
     }
+    std::fprintf(stderr, "clank: windowed done last_frame=%d draws=%d\n", frame, draws);
   }
 
   clank::m2::Destroy(renderer);
