@@ -233,8 +233,8 @@ namespace {
 WorldTransform LocalTransform(const Entity& entity) {
   const float c = std::cos(entity.angle);
   const float s = std::sin(entity.angle);
-  return {entity.x, entity.y, entity.z, c * entity.sx, -s * entity.sy,
-          s * entity.sx, c * entity.sy};
+  return {entity.x,       entity.y,      entity.z,     c * entity.sx,
+          -s * entity.sy, s * entity.sx, c * entity.sy};
 }
 
 WorldTransform Compose(const WorldTransform& parent, const Entity& local) {

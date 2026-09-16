@@ -10,8 +10,7 @@ int main() {
   s.entities.push_back({3, "line\nbreak", 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.5f});
   s.entities.push_back({4, "child", 2.0f, 0.0f, 0.5f, 0.5f, 1.0f, 0.25f, 1});
   std::string j = clank::m5::DumpJson(s);
-  if (j.find("\"z\":1.5") == std::string::npos ||
-      j.find("\"parent\":1") == std::string::npos)
+  if (j.find("\"z\":1.5") == std::string::npos || j.find("\"parent\":1") == std::string::npos)
     return 1;
   auto back = clank::m5::LoadJson(j);
   if (!back) {
@@ -35,8 +34,7 @@ int main() {
   auto world = clank::m5::ResolveWorldTransforms(tree);
   if (!world) return 1;
   if (std::fabs((*world)[1].x - 11.755165f) > 0.001f ||
-      std::fabs((*world)[1].y - 20.958851f) > 0.001f ||
-      std::fabs((*world)[1].z - 10.0f) > 0.001f ||
+      std::fabs((*world)[1].y - 20.958851f) > 0.001f || std::fabs((*world)[1].z - 10.0f) > 0.001f ||
       std::fabs((*world)[2].x - 8.099567f) > 0.001f ||
       std::fabs((*world)[2].y - 25.586208f) > 0.001f)
     return 1;
@@ -72,14 +70,12 @@ int main() {
   if (clank::m5::LoadJson(
           "{\"version\":0,\"seed\":1,\"entities\":[{\"id\":1,\"name\":\"\\ud800\"}]}"))
     return 1;
-  if (clank::m5::LoadJson(
-          "{\"version\":0,\"seed\":1,\"entities\":[{\"id\":1,\"name\":\"a\","
-          "\"x\":0,\"y\":0,\"angle\":0,\"sx\":1,\"sy\":1,\"parent\":-2}]}"))
+  if (clank::m5::LoadJson("{\"version\":0,\"seed\":1,\"entities\":[{\"id\":1,\"name\":\"a\","
+                          "\"x\":0,\"y\":0,\"angle\":0,\"sx\":1,\"sy\":1,\"parent\":-2}]}"))
     return 1;
-  if (clank::m5::LoadJson(
-          "{\"version\":0,\"seed\":1,\"entities\":[{\"id\":1,\"name\":\"a\","
-          "\"x\":0,\"y\":0,\"angle\":0,\"sx\":1,\"sy\":1},{\"id\":1,"
-          "\"name\":\"b\",\"x\":0,\"y\":0,\"angle\":0,\"sx\":1,\"sy\":1}]}"))
+  if (clank::m5::LoadJson("{\"version\":0,\"seed\":1,\"entities\":[{\"id\":1,\"name\":\"a\","
+                          "\"x\":0,\"y\":0,\"angle\":0,\"sx\":1,\"sy\":1},{\"id\":1,"
+                          "\"name\":\"b\",\"x\":0,\"y\":0,\"angle\":0,\"sx\":1,\"sy\":1}]}"))
     return 1;
   if (clank::m5::LoadJson("{\"version\":0,\"seed\":1.5,\"entities\":[]}")) return 1;
   if (clank::m5::LoadJson("{\"version\":0,\"seed\":2147483648,\"entities\":[]}")) return 1;
