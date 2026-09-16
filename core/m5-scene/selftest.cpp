@@ -79,6 +79,28 @@ int main() {
   auto empty_type = components;
   empty_type[1].type.clear();
   if (clank::m5::ResolveComponents(tree, empty_type, 11)) return 1;
+  clank::m5::ComponentStore store;
+  auto attached_collider = clank::m5::AttachComponent(store, tree, components[2]);
+  if (!attached_collider || *attached_collider != 102 || store.components.size() != 1) return 1;
+  auto attached_sprite = clank::m5::AttachComponent(store, tree, components[0]);
+  if (!attached_sprite || *attached_sprite != 100 || store.components.size() != 2) return 1;
+  auto by_id = clank::m5::LookupComponent(store, 100);
+  if (!by_id || by_id->id != 100 || by_id->owner != 11 || by_id->type != "Sprite") return 1;
+  auto by_owner = clank::m5::LookupComponents(store, 11);
+  if (!by_owner || *by_owner != std::vector<int>{100, 102}) return 1;
+  auto duplicate_store_id = clank::m5::AttachComponent(store, tree, {100, 10, "Health"});
+  if (duplicate_store_id) return 1;
+  auto missing_store_owner = clank::m5::AttachComponent(store, tree, {103, 99, "Audio"});
+  if (missing_store_owner) return 1;
+  auto empty_store_type = clank::m5::AttachComponent(store, tree, {103, 10, ""});
+  if (empty_store_type) return 1;
+  std::swap(store.components[0], store.components[1]);
+  std::swap(tree.entities[0], tree.entities[1]);
+  auto reordered_by_owner = clank::m5::LookupComponents(store, 11);
+  auto reordered_by_id = clank::m5::LookupComponent(store, 102);
+  if (!reordered_by_owner || *reordered_by_owner != std::vector<int>{100, 102} ||
+      !reordered_by_id || reordered_by_id->type != "Collider")
+    return 1;
   // Any key order, extra whitespace, version 1, \u escapes.
   auto reord = clank::m5::LoadJson(
       "{ \"seed\" : 7 , \"entities\" : [ { \"sy\" : 1 , \"sx\" : 1 , \"angle\" : 0 , "
