@@ -31,8 +31,8 @@ Run from the repository root; PNGs are written to the current directory:
 `--shot-after N` exits after exactly N ticks (0 captures the initial state).
 Pause/step controls apply to windowed sessions without `--shot-after`.
 Replay replaces live movement/drop input. Without a frame limit, headless runs
-240 ticks. Output paths go to stdout; update, draw, and full-frame timing
-p50/p95/p99 plus logged 2D/3D draw counts go to stderr.
+240 ticks. Output paths go to stdout; update, measured physics, draw, and
+full-frame timing p50/p95/p99 plus logged 2D/3D draw counts go to stderr.
 The same seed and replay reproduce scene JSON on the same build/backend.
 
 Headless screenshots rasterize the m2 2D draw log and a deterministic top-down
