@@ -37,6 +37,44 @@ void Clear(Renderer& r, Color c);
 void DrawRect(Renderer& r, float x, float y, float w, float h, Color c);
 void DrawCircle(Renderer& r, float x, float y, float radius, Color c);
 void DrawText(Renderer& r, const std::string& text, float x, float y, float size, Color c);
+
+// WHY perspective-only: both 3D samples use a fixed perspective camera; ortho can extend this.
+struct Vec3 {
+  float x = 0;
+  float y = 0;
+  float z = 0;
+};
+
+struct Camera {
+  Vec3 position{};
+  Vec3 target{};
+  Vec3 up{0, 1, 0};
+  float fov = 45;
+};
+
+enum class Draw3DKind { Cube, CubeWires, Sphere, SphereWires, Cylinder };
+
+// WHY one entry: a/b/c read as sizes (cube), radius (sphere) or rTop/rBottom/height (cylinder);
+// n/m read as rings/slices. Agents get the full 3D call without a log type per shape.
+struct Draw3DEntry {
+  Draw3DKind kind = Draw3DKind::Cube;
+  float x = 0, y = 0, z = 0;
+  float a = 0, b = 0, c = 0;
+  int n = 0, m = 0;
+  Color color{};
+};
+
+void BeginMode3D(Renderer& r, Camera camera);
+void EndMode3D(Renderer& r);
+void DrawCube(Renderer& r, float x, float y, float z, float sx, float sy, float sz, Color c);
+void DrawCubeWires(Renderer& r, float x, float y, float z, float sx, float sy, float sz, Color c);
+void DrawSphere(Renderer& r, float x, float y, float z, float radius, Color c);
+void DrawSphereWires(Renderer& r, float x, float y, float z, float radius, int rings, int slices,
+                     Color c);
+void DrawCylinder(Renderer& r, float x, float y, float z, float r_top, float r_bottom, float height,
+                  int slices, Color c);
+[[nodiscard]] std::size_t Draw3DLogCount(const Renderer& r);
+[[nodiscard]] const Draw3DEntry* Draw3DLogAt(const Renderer& r, std::size_t i);
 [[nodiscard]] std::size_t DrawLogCount(const Renderer& r);
 [[nodiscard]] const DrawEntry* DrawLogAt(const Renderer& r, std::size_t i);
 // Backend calls raylib only when IsWindowReady(); headless keeps DrawLog + 1x1 PNG

@@ -33,7 +33,7 @@ int Run(int argc, char** argv, const char* name, const char* title, const char* 
         demo.Step(static_cast<float>(dt));
         previous_drop = drop;
       },
-      [&](const Demo& demo) { demo.Draw(emitter); },
+      [&](const Demo& demo, clank::m2::Renderer& renderer) { demo.Draw(emitter, renderer); },
       [&](const Demo& demo, int seed) { return demo.Scene(seed, emitter); });
 }
 }  // namespace showcase

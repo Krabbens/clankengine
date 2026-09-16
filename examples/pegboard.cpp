@@ -45,7 +45,8 @@ struct Pegboard {
     items.push_back({physics::CreateBody(world, d), d});
   }
   void Step(float dt) { physics::Step(world, dt); }
-  void Draw(float emitter) const {
+  // WHY renderer param unused: 2D pegs draw raw raylib; the signature matches the 3D demos.
+  void Draw(float emitter, clank::m2::Renderer&) const {
     DrawRectangle(318, 116, 644, 536, {18, 30, 44, 255});
     for (size_t i = 0; i < items.size(); ++i) {
       const auto& [body, d] = items[i];

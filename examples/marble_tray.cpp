@@ -44,24 +44,29 @@ struct MarbleTray {
     items.push_back({physics::CreateBody(world, d), d});
   }
   void Step(float dt) { physics::Step(world, dt); }
-  void Draw(float emitter) const {
-    Camera3D camera{{18, 17, 22}, {0, 1, 0}, {0, 1, 0}, 42, CAMERA_PERSPECTIVE};
-    BeginMode3D(camera);
+  void Draw(float emitter, clank::m2::Renderer& renderer) const {
+    namespace m2 = clank::m2;
+    // WHY local palette: m2::Color is stdlib-only, so raylib showcase colors convert at the call.
+    const m2::Color pal[3] = {{70, 218, 195, 255}, {255, 186, 99, 255}, {139, 151, 255, 255}};
+    const ::Color faded = Fade(showcase::ink, .18f);
+    const m2::Color faded_wire{faded.r, faded.g, faded.b, faded.a};
+    const m2::Camera camera{{18, 17, 22}, {0, 1, 0}, {0, 1, 0}, 42};
+    m2::BeginMode3D(renderer, camera);
     for (size_t i = 0; i < items.size(); ++i) {
       const auto& [body, d] = items[i];
       const auto p = physics::GetPosition(body);
-      Vector3 v{p.x, p.y, p.z};
       if (d.shape == physics::ShapeKind::Sphere) {
-        DrawCylinder({p.x, .01f, p.z}, .47f, .47f, .01f, 24, {20, 30, 40, 255});
-        DrawSphere(v, d.sphere_r, showcase::colors[i % 3]);
-        DrawSphereWires(v, d.sphere_r + .005f, 4, 8, Fade(showcase::ink, .18f));
+        m2::DrawCylinder(renderer, p.x, .01f, p.z, .47f, .47f, .01f, 24, {20, 30, 40, 255});
+        m2::DrawSphere(renderer, p.x, p.y, p.z, d.sphere_r, pal[i % 3]);
+        m2::DrawSphereWires(renderer, p.x, p.y, p.z, d.sphere_r + .005f, 4, 8, faded_wire);
       } else {
-        DrawCube(v, d.box_hx * 2, d.box_hy * 2, d.box_hz * 2, {38, 57, 74, 255});
-        DrawCubeWires(v, d.box_hx * 2, d.box_hy * 2, d.box_hz * 2, {83, 114, 138, 255});
+        const float sx = d.box_hx * 2, sy = d.box_hy * 2, sz = d.box_hz * 2;
+        m2::DrawCube(renderer, p.x, p.y, p.z, sx, sy, sz, {38, 57, 74, 255});
+        m2::DrawCubeWires(renderer, p.x, p.y, p.z, sx, sy, sz, {83, 114, 138, 255});
       }
     }
-    DrawSphereWires({emitter, 7, 0}, .5f, 8, 12, showcase::colors[0]);
-    EndMode3D();
+    m2::DrawSphereWires(renderer, emitter, 7, 0, .5f, 8, 12, pal[0]);
+    m2::EndMode3D(renderer);
     DrawText("02 / DEPTH", 44, 146, 20, showcase::ink);
     DrawText("30 seeded spheres\nStatic box tray\n3-axis collision", 44, 184, 18, showcase::muted);
     DrawText("BOX3D ALPHA", 1000, 146, 20, showcase::colors[1]);

@@ -278,6 +278,6 @@ int main(int argc, char** argv) {
         game.Update(static_cast<float>(dt), up, dn, lf, rt, atk && !prev_atk);
         prev_atk = atk;
       },
-      [](const zelda::Game& game) { game.Draw(); },
+      [](const zelda::Game& game, clank::m2::Renderer&) { game.Draw(); },
       [](const zelda::Game& game, int seed) { return game.Scene(seed); });
 }
