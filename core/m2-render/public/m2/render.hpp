@@ -57,12 +57,13 @@ struct Camera {
 enum class Draw3DKind { Cube, CubeWires, Sphere, SphereWires, Cylinder, CylinderWires };
 
 // WHY one entry: a/b/c read as sizes (cube), radius (sphere) or rTop/rBottom/height (cylinder);
-// n/m read as rings/slices. Agents get the full 3D call without a log type per shape.
+// n/m read as rings/slices; tex selects a checker texture (-1 keeps the flat color).
 struct Draw3DEntry {
   Draw3DKind kind = Draw3DKind::Cube;
   float x = 0, y = 0, z = 0;
   float a = 0, b = 0, c = 0;
   int n = 0, m = 0;
+  int tex = -1;
   Color color{};
 };
 
@@ -112,5 +113,17 @@ bool AudioReady(const Audio& audio);
 Sfx LoadTone(Audio& audio, int freq_hz, int millis, int wave);
 void PlaySfx(Audio& audio, const Sfx& sfx);
 void UnloadSfx(Audio& audio, const Sfx& sfx);
+
+// WHY params, not pixels: a checker is fully described by cells plus two colors, so no binary
+// assets and no GPU are needed until a window exists; the headless raster evaluates the same
+// pattern in world space.
+struct Texture {
+  int id = -1;
+};
+
+Texture LoadChecker(int cells, Color a, Color b);
+void UnloadTexture(Texture& texture);
+void DrawCubeTextured(Renderer& r, float x, float y, float z, float sx, float sy, float sz,
+                      Texture texture, Color tint);
 
 }  // namespace clank::m2
