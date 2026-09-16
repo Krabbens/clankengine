@@ -1,5 +1,7 @@
 #pragma once
+#include <expected>
 #include <functional>
+#include <string>
 
 namespace clank::m1 {
 
@@ -13,6 +15,14 @@ struct Frame {
 };
 
 using UpdateFn = std::function<void(Frame, double)>;
+using DrawFn = std::function<void()>;
+
+struct WindowConfig {
+  int width = 1280;
+  int height = 720;
+  std::string title = "clank";
+  bool resizable = false;
+};
 
 class Stepper {
  public:
@@ -32,6 +42,16 @@ class Stepper {
 
 void Run(const LoopConfig& cfg, const UpdateFn& update);
 
-// TODO(wave2): attach raylib window/event pump inside Run; headless stays default for agents.
+// WHY: header stays stdlib-only; raylib is included only in impl so headless builds need no display.
+std::expected<void, std::string> OpenWindow(const WindowConfig& cfg);
+void CloseWindow();
+[[nodiscard]] bool WindowOpen();
+[[nodiscard]] bool ShouldClose();
+// WHY: m2 draw calls belong between BeginFrame/EndFrame so one frame batches GPU work.
+void BeginFrame(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
+void EndFrame();
+// WHY: windowed fixed-step reuses Stepper with <=5 catch-up steps to avoid spiral of death.
+std::expected<void, std::string> RunWindowed(const LoopConfig& loop, const WindowConfig& win,
+                                             const UpdateFn& update, const DrawFn& draw);
 
 }  // namespace clank::m1
