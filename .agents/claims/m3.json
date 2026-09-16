@@ -1,0 +1,17 @@
+{
+  "module": "m3",
+  "agent": "agent-zelda",
+  "branch": "a/m3-brick-breaker",
+  "started_utc": "2026-09-16T08:31:46Z",
+  "heartbeat_utc": "2026-09-16T09:01:31Z",
+  "ttl_min": 30,
+  "intent": "Restitution plus breakout proving contact events in a game",
+  "paths": [
+    "core/m3-physics2d/"
+  ],
+  "exception": {
+    "type": "allow-cross",
+    "reason": "breakout sample lives in examples/ and test/; shipping it with the facade change proves contacts and restitution with zero dead API",
+    "extra_bench": "brick-break counts plus frame update_ms in PR body"
+  }
+}

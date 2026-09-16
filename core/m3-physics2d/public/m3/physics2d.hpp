@@ -26,6 +26,7 @@ struct BodyDef {
   float box_hy = 0.5f;
   float density = 1.0f;
   float friction = 0.4f;
+  float restitution = 0.0f;
   // WHY opt-in: sensors skip collision response, so only explicit triggers observe overlaps.
   bool sensor = false;
 };

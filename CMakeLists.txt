@@ -69,13 +69,14 @@ target_link_libraries(minimal PRIVATE m1_loop m5_scene clank_warnings)
 
 include(CTest)
 
-foreach(sample pegboard marble_tray zelda)
+foreach(sample pegboard marble_tray zelda breakout)
   add_executable(${sample} examples/${sample}.cpp)
   target_link_libraries(${sample} PRIVATE m0_foundation m1_loop m2_render
     m5_scene m6_input clank_warnings)
 endforeach()
 target_link_libraries(pegboard PRIVATE m3_physics2d)
 target_link_libraries(marble_tray PRIVATE m4_physics3d)
+target_link_libraries(breakout PRIVATE m3_physics2d)
 
 if(BUILD_TESTING)
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
@@ -105,6 +106,9 @@ if(BUILD_TESTING)
   add_test(NAME zelda-win COMMAND ${Python3_EXECUTABLE}
     ${CMAKE_SOURCE_DIR}/test/zelda_win_test.py $<TARGET_FILE:zelda>
     ${CMAKE_SOURCE_DIR}/examples/replays/zelda_win.clk)
+  add_test(NAME breakout-game COMMAND ${Python3_EXECUTABLE}
+    ${CMAKE_SOURCE_DIR}/test/breakout_test.py $<TARGET_FILE:breakout>
+    ${CMAKE_SOURCE_DIR}/examples/replays/drop.clk)
 endif()
 
 function(clank_selftest name lib src inc)

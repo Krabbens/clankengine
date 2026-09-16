@@ -57,6 +57,7 @@ Body* CreateBody(World* world, const BodyDef& def) {
   b2ShapeDef sdef = b2DefaultShapeDef();
   sdef.density = def.density;
   sdef.material.friction = def.friction;
+  sdef.material.restitution = def.restitution;
   // WHY always on: events are buffered until queried; no callbacks, no cost when unread.
   sdef.enableContactEvents = true;
   // WHY same treatment: any overlap with a sensor reports, whichever side asked for events.
@@ -83,7 +84,6 @@ Body* CreateBody(World* world, const BodyDef& def) {
 
 void DestroyBody(Body* body) {
   if (body == nullptr) return;
-  // WHY: detach wrapper first so DestroyWorld never sees a dangling entry.
   b2DestroyBody(body->id);
   if (World* w = body->world; w != nullptr) {
     auto& v = w->bodies;
@@ -128,15 +128,22 @@ const Body* FindBody(const World* world, b2BodyId id) {
 std::vector<TouchEvent> GetTouches(World* world) {
   std::vector<TouchEvent> out;
   if (world == nullptr) return out;
+  // WHY validity first: end events may reference shapes destroyed since the last step.
   const b2ContactEvents events = b2World_GetContactEvents(world->id);
   for (int i = 0; i < events.beginCount; ++i) {
-    const Body* a = FindBody(world, b2Shape_GetBody(events.beginEvents[i].shapeIdA));
-    const Body* b = FindBody(world, b2Shape_GetBody(events.beginEvents[i].shapeIdB));
+    const b2ShapeId sa = events.beginEvents[i].shapeIdA;
+    const b2ShapeId sb = events.beginEvents[i].shapeIdB;
+    if (!b2Shape_IsValid(sa) || !b2Shape_IsValid(sb)) continue;
+    const Body* a = FindBody(world, b2Shape_GetBody(sa));
+    const Body* b = FindBody(world, b2Shape_GetBody(sb));
     if (a != nullptr && b != nullptr) out.push_back(TouchEvent{a, b, true});
   }
   for (int i = 0; i < events.endCount; ++i) {
-    const Body* a = FindBody(world, b2Shape_GetBody(events.endEvents[i].shapeIdA));
-    const Body* b = FindBody(world, b2Shape_GetBody(events.endEvents[i].shapeIdB));
+    const b2ShapeId sa = events.endEvents[i].shapeIdA;
+    const b2ShapeId sb = events.endEvents[i].shapeIdB;
+    if (!b2Shape_IsValid(sa) || !b2Shape_IsValid(sb)) continue;
+    const Body* a = FindBody(world, b2Shape_GetBody(sa));
+    const Body* b = FindBody(world, b2Shape_GetBody(sb));
     if (a != nullptr && b != nullptr) out.push_back(TouchEvent{a, b, false});
   }
   return out;
@@ -147,13 +154,19 @@ std::vector<OverlapEvent> GetOverlaps(World* world) {
   if (world == nullptr) return out;
   const b2SensorEvents events = b2World_GetSensorEvents(world->id);
   for (int i = 0; i < events.beginCount; ++i) {
-    const Body* sensor = FindBody(world, b2Shape_GetBody(events.beginEvents[i].sensorShapeId));
-    const Body* visitor = FindBody(world, b2Shape_GetBody(events.beginEvents[i].visitorShapeId));
+    const b2ShapeId ss = events.beginEvents[i].sensorShapeId;
+    const b2ShapeId vs = events.beginEvents[i].visitorShapeId;
+    if (!b2Shape_IsValid(ss) || !b2Shape_IsValid(vs)) continue;
+    const Body* sensor = FindBody(world, b2Shape_GetBody(ss));
+    const Body* visitor = FindBody(world, b2Shape_GetBody(vs));
     if (sensor != nullptr && visitor != nullptr) out.push_back(OverlapEvent{sensor, visitor, true});
   }
   for (int i = 0; i < events.endCount; ++i) {
-    const Body* sensor = FindBody(world, b2Shape_GetBody(events.endEvents[i].sensorShapeId));
-    const Body* visitor = FindBody(world, b2Shape_GetBody(events.endEvents[i].visitorShapeId));
+    const b2ShapeId ss = events.endEvents[i].sensorShapeId;
+    const b2ShapeId vs = events.endEvents[i].visitorShapeId;
+    if (!b2Shape_IsValid(ss) || !b2Shape_IsValid(vs)) continue;
+    const Body* sensor = FindBody(world, b2Shape_GetBody(ss));
+    const Body* visitor = FindBody(world, b2Shape_GetBody(vs));
     if (sensor != nullptr && visitor != nullptr)
       out.push_back(OverlapEvent{sensor, visitor, false});
   }

@@ -89,5 +89,61 @@ int main() {
   clank::m3::DestroyBody(dr);
   clank::m3::DestroyBody(zn);
   clank::m3::DestroyWorld(sw);
-  return entered && exited ? 0 : 1;
+  if (!entered || !exited) return 1;
+  // WHY bounce: restitution 1 floor returns the ball; upward velocity proves energy came back.
+  clank::m3::World* bw = clank::m3::CreateWorld({0.0f, -10.0f});
+  if (bw == nullptr) return 1;
+  clank::m3::BodyDef ground{};
+  ground.shape = clank::m3::ShapeKind::Box;
+  ground.box_hx = 5.0f;
+  ground.box_hy = 0.5f;
+  ground.restitution = 1.0f;
+  clank::m3::Body* gr = clank::m3::CreateBody(bw, ground);
+  clank::m3::BodyDef hop{};
+  hop.type = clank::m3::BodyType::Dynamic;
+  hop.restitution = 1.0f;
+  hop.position = {0.0f, 3.0f};
+  clank::m3::Body* hb = clank::m3::CreateBody(bw, hop);
+  if (gr == nullptr || hb == nullptr) return 1;
+  bool bounced = false;
+  for (int i = 0; i < 300 && !bounced; ++i) {
+    clank::m3::Step(bw, kDt);
+    if (clank::m3::GetVelocity(hb).y > 0.5f) bounced = true;
+  }
+  std::printf("m3 restitution bounce=%s\n", bounced ? "PASS" : "FAIL");
+  clank::m3::DestroyBody(hb);
+  clank::m3::DestroyBody(gr);
+  clank::m3::DestroyWorld(bw);
+  if (!bounced) return 1;
+  // WHY destroy mid-run: end events may reference dead shapes; the facade must skip them, not trap.
+  clank::m3::World* dw = clank::m3::CreateWorld({0.0f, -10.0f});
+  if (dw == nullptr) return 1;
+  clank::m3::BodyDef plate{};
+  plate.shape = clank::m3::ShapeKind::Box;
+  plate.box_hx = 5.0f;
+  plate.box_hy = 0.5f;
+  clank::m3::Body* pl = clank::m3::CreateBody(dw, plate);
+  clank::m3::BodyDef shot{};
+  shot.type = clank::m3::BodyType::Dynamic;
+  shot.position = {0.0f, 5.0f};
+  clank::m3::Body* sh = clank::m3::CreateBody(dw, shot);
+  if (pl == nullptr || sh == nullptr) return 1;
+  bool hit = false;
+  for (int i = 0; i < 200 && !hit; ++i) {
+    clank::m3::Step(dw, kDt);
+    for (const auto& t : clank::m3::GetTouches(dw))
+      if (t.began) hit = true;
+  }
+  if (!hit) return 1;
+  clank::m3::DestroyBody(pl);
+  clank::m3::Step(dw, kDt);
+  bool stale = false;
+  for (const auto& t : clank::m3::GetTouches(dw)) {
+    (void)t;
+    stale = true;
+  }
+  std::printf("m3 destroy mid-run=%s\n", !stale ? "PASS" : "FAIL");
+  clank::m3::DestroyBody(sh);
+  clank::m3::DestroyWorld(dw);
+  return stale ? 1 : 0;
 }
