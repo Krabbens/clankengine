@@ -45,7 +45,6 @@ void Run(const LoopConfig& cfg, const UpdateFn& update);
 // display.
 std::expected<void, std::string> OpenWindow(const WindowConfig& cfg);
 void CloseWindow();
-[[nodiscard]] bool WindowOpen();
 [[nodiscard]] bool ShouldClose();
 // WHY: m2 draw calls belong between BeginFrame/EndFrame so one frame batches GPU work.
 void BeginFrame(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
