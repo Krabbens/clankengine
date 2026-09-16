@@ -1,18 +1,13 @@
 #include <raylib.h>
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
-#include <cstdio>
-#include <fstream>
-#include <string>
-#include <vector>
+#include <memory>
 
 #include "m0/foundation.hpp"
-#include "m1/loop.hpp"
-#include "m2/render.hpp"
 #include "m5/scene.hpp"
 #include "m6/input.hpp"
+#include "sample_loop.hpp"
 
 namespace zelda {
 // WHY top-down XZ dungeon: one fixed camera reads as Zelda without a follow cam.
@@ -257,114 +252,32 @@ struct Game {
 }  // namespace zelda
 
 int main(int argc, char** argv) {
-  if (argc == 2 && std::string(argv[1]) == "--help") {
-    std::fprintf(
-        stderr,
-        "zelda [--headless] [--shot-after N] [--dump-scene out.json] "
-        "[--replay input.clk] [--seed N]\nArrows/WASD: move | Space: sword | P: pause | N: "
-        "step | Esc: exit\n");
-    return 0;
-  }
-  auto flags = clank::m0::ParseFlags(argc, argv);
-  if (!flags) {
-    std::fprintf(stderr, "%s\n", flags.error().c_str());
-    return 1;
-  }
-  clank::m6::Playback playback;
-  if (!flags->replay.empty()) {
-    if (auto loaded = playback.Load(flags->replay); !loaded) {
-      std::fprintf(stderr, "%s\n", loaded.error().c_str());
-      return 1;
-    }
-  }
-  SetTraceLogLevel(LOG_NONE);
-  if (!flags->headless) {
-    if (auto opened = clank::m1::OpenWindow({1280, 720, "Zelda / 3D", false}); !opened) {
-      std::fprintf(stderr, "%s\n", opened.error().c_str());
-      return 1;
-    }
-    SetTargetFPS(60);
-  }
-  zelda::Game game(flags->seed);
-  clank::m1::Stepper stepper(1.0 / 60.0);
-  const int limit = flags->shot_after >= 0 ? flags->shot_after : flags->headless ? 240 : -1;
   bool prev_atk = false;
-  std::vector<double> timings;
-  auto update = [&](clank::m1::Frame f, double dt) {
-    auto held = [&](clank::m6::Key key, int live1, int live2) {
-      if (!flags->replay.empty()) return playback.IsDown(f.number, key);
-      if (flags->headless) return false;
-      return IsKeyDown(live1) || IsKeyDown(live2);
-    };
-    const bool up = held(clank::m6::Key::Up, KEY_UP, KEY_W);
-    const bool dn = held(clank::m6::Key::Down, KEY_DOWN, KEY_S);
-    const bool lf = held(clank::m6::Key::Left, KEY_LEFT, KEY_A);
-    const bool rt = held(clank::m6::Key::Right, KEY_RIGHT, KEY_D);
-    const bool atk = held(clank::m6::Key::Space, KEY_SPACE, KEY_SPACE);
-    const auto start = std::chrono::steady_clock::now();
-    game.Update(static_cast<float>(dt), up, dn, lf, rt, atk && !prev_atk);
-    if (limit >= 0)
-      timings.push_back(
-          std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start)
-              .count());
-    prev_atk = atk;
-  };
-  int result = 0;
-  while (!clank::m1::ShouldClose()) {
-    if (!flags->headless && limit < 0) {
-      if (IsKeyPressed(KEY_P)) {
-        if (stepper.paused())
-          stepper.Resume();
-        else
-          stepper.Pause();
-      }
-      if (stepper.paused() && IsKeyPressed(KEY_N)) stepper.StepOnce(update);
-    }
-    if (limit < 0 || stepper.next() < limit) stepper.Advance(1, update);
-    const bool done = limit >= 0 && stepper.next() == limit;
-    if (!flags->headless) {
-      clank::m1::BeginFrame(12, 19, 30, 255);
-      game.Draw();
-      DrawRectangle(0, 0, 1280, 108, {12, 19, 30, 255});
-      DrawText("CLANK / ZELDA LAB", 40, 22, 18, {70, 218, 195, 255});
-      DrawText("Triforce garden / 3D", 40, 48, 34, {226, 235, 244, 255});
-      DrawText("Seeded dungeon, sword combat, replayable input", 40, 88, 16, {135, 158, 181, 255});
-      DrawRectangle(0, 660, 1280, 60, {12, 19, 30, 255});
-      DrawText("ARROWS/WASD move  SPACE sword  P pause  N step", 40, 684, 18, {226, 235, 244, 255});
-      DrawText(TextFormat("%s  /  %04d", stepper.paused() ? "PAUSED" : "60 HZ", stepper.next()),
-               1030, 684, 18, {70, 218, 195, 255});
-    }
-    if (done && flags->shot_after >= 0) {
-      const std::string path = "zelda_frame" + std::to_string(limit) + ".png";
-      auto renderer = clank::m2::Create();
-      if (auto shot = clank::m2::TakeScreenshot(renderer, path); !shot) {
-        std::fprintf(stderr, "%s\n", shot.error().c_str());
-        result = 1;
-      } else {
-        std::printf("%s\n", path.c_str());
-      }
-      clank::m2::Destroy(renderer);
-    }
-    if (!flags->headless) clank::m1::EndFrame();
-    if (done) break;
-  }
-  clank::m1::CloseWindow();
-  if (!flags->dump_scene.empty()) {
-    std::ofstream out(flags->dump_scene);
-    out << clank::m5::DumpJson(game.Scene(flags->seed));
-    out.close();
-    if (!out) {
-      std::fprintf(stderr, "cannot write %s\n", flags->dump_scene.c_str());
-      result = 1;
-    } else {
-      std::printf("%s\n", flags->dump_scene.c_str());
-    }
-  }
-  if (!timings.empty()) {
-    std::sort(timings.begin(), timings.end());
-    auto pct = [&](double q) { return timings[static_cast<size_t>((timings.size() - 1) * q)]; };
-    std::fprintf(stderr, "zelda: frames=%d update_ms p50=%.4f p95=%.4f p99=%.4f\n", stepper.next(),
-                 pct(.50), pct(.95), pct(.99));
-  }
-  return result;
+  return sample_loop::Run<zelda::Game>(
+      argc, argv,
+      {"zelda",
+       "CLANK / ZELDA LAB",
+       "Triforce garden / 3D",
+       "Seeded dungeon, sword combat, replayable input",
+       "Arrows/WASD: move | Space: sword | P: pause | N: step | Esc: exit\n",
+       "ARROWS/WASD move  SPACE sword  P pause  N step",
+       {70, 218, 195, 255},
+       {226, 235, 244, 255},
+       {135, 158, 181, 255}},
+      [](int seed) { return std::make_unique<zelda::Game>(seed); },
+      [&](zelda::Game& game, const sample_loop::Context& ctx, int frame, double dt) {
+        // WHY two calls: with a replay both read playback (same value); live they OR arrows+WASD.
+        auto held = [&](clank::m6::Key key, int live1, int live2) {
+          return ctx.isDown(frame, key, live1) || ctx.isDown(frame, key, live2);
+        };
+        const bool up = held(clank::m6::Key::Up, KEY_UP, KEY_W);
+        const bool dn = held(clank::m6::Key::Down, KEY_DOWN, KEY_S);
+        const bool lf = held(clank::m6::Key::Left, KEY_LEFT, KEY_A);
+        const bool rt = held(clank::m6::Key::Right, KEY_RIGHT, KEY_D);
+        const bool atk = held(clank::m6::Key::Space, KEY_SPACE, KEY_SPACE);
+        game.Update(static_cast<float>(dt), up, dn, lf, rt, atk && !prev_atk);
+        prev_atk = atk;
+      },
+      [](const zelda::Game& game) { game.Draw(); },
+      [](const zelda::Game& game, int seed) { return game.Scene(seed); });
 }
