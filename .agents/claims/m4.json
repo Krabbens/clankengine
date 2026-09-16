@@ -1,0 +1,13 @@
+{
+  "module": "m4",
+  "agent": "agent-zelda",
+  "branch": "a/m4-sensor-overlap",
+  "started_utc": "2026-09-16T08:17:19Z",
+  "heartbeat_utc": "2026-09-16T08:19:48Z",
+  "ttl_min": 30,
+  "intent": "Box3D sensor overlap events mirroring m3",
+  "paths": [
+    "core/m4-physics3d/"
+  ],
+  "exception": null
+}

@@ -55,5 +55,41 @@ int main() {
   clank::m4::DestroyBody(bl);
   clank::m4::DestroyBody(fl);
   clank::m4::DestroyWorld(cw);
-  return touched ? 0 : 1;
+  if (!touched) return 1;
+  // WHY sensors: overlap without collision response; begin on entry, end on exit, ball falls
+  // through.
+  clank::m4::World* sw = clank::m4::CreateWorld({0.0f, -10.0f, 0.0f});
+  if (sw == nullptr) return 1;
+  clank::m4::BodyDef zone{};
+  zone.shape = clank::m4::ShapeKind::Box;
+  zone.box_hx = 5.0f;
+  zone.box_hy = 0.5f;
+  zone.box_hz = 5.0f;
+  zone.position = {0.0f, 0.0f, 0.0f};
+  zone.sensor = true;
+  clank::m4::Body* zn = clank::m4::CreateBody(sw, zone);
+  clank::m4::BodyDef drop{};
+  drop.type = clank::m4::BodyType::Dynamic;
+  drop.position = {0.0f, 5.0f, 0.0f};
+  clank::m4::Body* dr = clank::m4::CreateBody(sw, drop);
+  if (zn == nullptr || dr == nullptr) return 1;
+  for (int i = 0; i < 10; ++i) clank::m4::Step(sw, kDt);
+  if (!clank::m4::GetOverlaps(sw).empty()) return 1;
+  bool entered = false;
+  bool exited = false;
+  for (int i = 0; i < 300 && !exited; ++i) {
+    clank::m4::Step(sw, kDt);
+    for (const auto& t : clank::m4::GetOverlaps(sw)) {
+      if (t.began && t.sensor == zn && t.visitor == dr) entered = true;
+      if (!t.began && t.sensor == zn && t.visitor == dr) exited = true;
+    }
+  }
+  // WHY -0.5 not -2: the loop stops at the first end event, when the ball just cleared the zone.
+  if (clank::m4::GetPosition(dr).y > -0.5f) return 1;
+  if (!clank::m4::GetTouches(sw).empty()) return 1;
+  std::printf("m4 overlap begin+end=%s\n", entered && exited ? "PASS" : "FAIL");
+  clank::m4::DestroyBody(dr);
+  clank::m4::DestroyBody(zn);
+  clank::m4::DestroyWorld(sw);
+  return entered && exited ? 0 : 1;
 }
