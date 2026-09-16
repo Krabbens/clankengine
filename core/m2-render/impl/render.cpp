@@ -2,7 +2,9 @@
 
 #include <raylib.h>
 
+#include <filesystem>
 #include <fstream>
+#include <system_error>
 #include <unordered_map>
 #include <vector>
 
@@ -111,8 +113,21 @@ std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::st
   // WHY: real pixels need a window; headless agents still need see-channel bytes.
   // Precondition: ::IsWindowReady() selects real ::TakeScreenshot vs stub PNG.
   if (::IsWindowReady()) {
+    // WHY two-path check: raylib 5.5 TakeScreenshot drops directories and saves
+    // basename(file) to cwd (observed in CI). Honor the contract either way.
     ::TakeScreenshot(path.c_str());
-    return {};
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    if (fs::exists(path, ec) && !ec) return {};
+    const std::string base = path.substr(path.find_last_of("/\\") + 1);
+    if (base != path && fs::exists(base, ec) && !ec) {
+      fs::copy_file(base, path, fs::copy_options::overwrite_existing, ec);
+      std::error_code rm_ec;
+      fs::remove(base, rm_ec);
+      if (!ec) return {};
+      return std::unexpected("m2: cannot move screenshot: " + ec.message());
+    }
+    return std::unexpected("m2: screenshot missing at " + path);
   }
   std::ofstream out(path, std::ios::binary);
   if (!out) return std::unexpected("m2: cannot open " + path);

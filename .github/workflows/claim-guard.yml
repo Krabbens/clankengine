@@ -33,11 +33,12 @@ jobs:
           FILES=$(git diff --name-only origin/main...HEAD -- || true)
           echo "${FILES}"
           echo "${FILES}" > /tmp/files.txt
-          # WHY: claim files are bookkeeping, excluded from loc limits already;
-          # a PR that only creates/deletes them (claim/release) auto-passes.
+          # WHY env flag, not early exit: later steps must skip too (empty MODS
+          # would fail the claim check). Claim files are bookkeeping, already
+          # excluded from loc limits; a PR touching only them auto-passes.
           if ! grep -qvE '^\.agents/claims/' /tmp/files.txt; then
             echo "claims bookkeeping only, auto-pass"
-            exit 0
+            echo "CLAIMS_ONLY=true" >> "$GITHUB_ENV"
           fi
           MODS=$(grep -oE '(core/m[0-6]-[a-z0-9]+|tools/m7-[a-z]+|examples/|test/|spec/|src/|AGENTS\.md)' /tmp/files.txt | sort -u || true)
           echo "touched: ${MODS}"
@@ -55,8 +56,9 @@ jobs:
                   mods.add('m7'); continue
               if p.startswith(('examples/', 'test/', 'spec/', 'src/')) or p == 'AGENTS.md':
                   mods.add('m8'); continue
-          # Non-module files (workflows, claims, docs) do not count toward the 1-module rule,
-          # but a PR with ONLY those and no module is rejected below via missing claim.
+          # Non-module files (workflows, docs) do not count toward the 1-module rule,
+          # but a PR with ONLY those and no module is rejected below via missing claim
+          # (claims-only PRs skip via CLAIMS_ONLY above).
           print('modules:', sorted(mods))
           with open('/tmp/mods.txt', 'w') as f:
               f.write('\n'.join(sorted(mods)))
@@ -70,6 +72,7 @@ jobs:
           fi
 
       - name: Claim file must exist, match branch, and be fresh
+        if: env.CLAIMS_ONLY != 'true'
         run: |
           MOD=$(cut -d/ -f1 /tmp/mods.txt | head -n1 || true)
           if [ -z "${MOD}" ]; then
@@ -106,6 +109,7 @@ jobs:
           EOF
 
       - name: No second open PR on the same module
+        if: env.CLAIMS_ONLY != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

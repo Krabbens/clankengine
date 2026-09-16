@@ -1,11 +1,11 @@
 {
   "module": "m2",
   "agent": "agent-main",
-  "branch": "a/m2-gcc-missing-init",
-  "started_utc": "2026-09-16T01:16:25Z",
-  "heartbeat_utc": "2026-09-16T01:16:25Z",
+  "branch": "a/m2-shot-path-robust",
+  "started_utc": "2026-09-16T02:25:20Z",
+  "heartbeat_utc": "2026-09-16T02:25:20Z",
   "ttl_min": 30,
-  "intent": "fix -Wmissing-field-initializers in DrawEntry inits (GCC CI)",
+  "intent": "TakeScreenshot honors directories (raylib 5.5 drops them)",
   "paths": [
     "core/m2-render/"
   ],
