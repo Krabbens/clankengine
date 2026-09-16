@@ -39,7 +39,8 @@ void DrawCircle(Renderer& r, float x, float y, float radius, Color c);
 void DrawText(Renderer& r, const std::string& text, float x, float y, float size, Color c);
 [[nodiscard]] std::size_t DrawLogCount(const Renderer& r);
 [[nodiscard]] const DrawEntry* DrawLogAt(const Renderer& r, std::size_t i);
-// STUB: always writes 1x1 PNG until raylib backend lands (WHY: agents need see-channel headless).
+// Backend calls raylib only when IsWindowReady(); headless keeps DrawLog + 1x1 PNG
+// (WHY: agents need the see-channel without a display).
 std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::string& path);
 
 }  // namespace clank::m2

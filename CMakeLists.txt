@@ -35,14 +35,17 @@ target_include_directories(m1_loop PUBLIC core/m1-loop/public)
 
 add_library(m2_render STATIC core/m2-render/impl/render.cpp)
 target_link_libraries(m2_render PUBLIC clank_warnings)
+target_link_libraries(m2_render PRIVATE raylib)
 target_include_directories(m2_render PUBLIC core/m2-render/public)
 
 add_library(m3_physics2d STATIC core/m3-physics2d/impl/physics2d.cpp)
 target_link_libraries(m3_physics2d PUBLIC clank_warnings)
+target_link_libraries(m3_physics2d PRIVATE box2d)
 target_include_directories(m3_physics2d PUBLIC core/m3-physics2d/public)
 
 add_library(m4_physics3d STATIC core/m4-physics3d/impl/physics3d.cpp)
 target_link_libraries(m4_physics3d PUBLIC clank_warnings)
+target_link_libraries(m4_physics3d PRIVATE box3d)
 target_include_directories(m4_physics3d PUBLIC core/m4-physics3d/public)
 
 add_library(m5_scene STATIC core/m5-scene/impl/scene.cpp)
