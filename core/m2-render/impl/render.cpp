@@ -1,6 +1,7 @@
 #include "m2/render.hpp"
 
 #include <raylib.h>
+#include <rlgl.h>
 
 #include <filesystem>
 #include <fstream>
@@ -113,6 +114,9 @@ std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::st
   // WHY: real pixels need a window; headless agents still need see-channel bytes.
   // Precondition: ::IsWindowReady() selects real ::TakeScreenshot vs stub PNG.
   if (::IsWindowReady()) {
+    // WHY flush first: raylib batches shapes on CPU and submits at EndDrawing;
+    // reading pixels before the flush would capture only the cleared background.
+    ::rlDrawRenderBatchActive();
     // WHY two-path check: raylib 5.5 TakeScreenshot drops directories and saves
     // basename(file) to cwd (observed in CI). Honor the contract either way.
     ::TakeScreenshot(path.c_str());

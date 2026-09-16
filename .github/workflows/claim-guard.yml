@@ -60,8 +60,10 @@ jobs:
           # but a PR with ONLY those and no module is rejected below via missing claim
           # (claims-only PRs skip via CLAIMS_ONLY above).
           print('modules:', sorted(mods))
+          # WHY trailing newline: wc -l counts newlines, join() emits none,
+          # so without it a 2-module PR counts as 1 and the gate never fires.
           with open('/tmp/mods.txt', 'w') as f:
-              f.write('\n'.join(sorted(mods)))
+              f.write('\n'.join(sorted(mods)) + '\n')
           EOF
           N=$(wc -l < /tmp/mods.txt | tr -d ' ')
           if [ "${N}" -gt 1 ]; then
