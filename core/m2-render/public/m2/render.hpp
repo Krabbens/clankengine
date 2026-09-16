@@ -40,21 +40,35 @@ void DrawCircle(Renderer& r, float x, float y, float radius, Color c);
 void DrawTriangle(Renderer& r, float x1, float y1, float x2, float y2, float x3, float y3, Color c);
 void DrawText(Renderer& r, const std::string& text, float x, float y, float size, Color c);
 
-// WHY perspective-only: both 3D samples use a fixed perspective camera; ortho can extend this.
 struct Vec3 {
   float x = 0;
   float y = 0;
   float z = 0;
 };
 
+enum class Projection { Perspective, Orthographic };
+
 struct Camera {
   Vec3 position{};
   Vec3 target{};
   Vec3 up{0, 1, 0};
   float fov = 45;
+  // For Orthographic this is the vertical world-space view size, matching raylib's fovy.
+  Projection projection = Projection::Perspective;
 };
 
-enum class Draw3DKind { Cube, CubeWires, Sphere, SphereWires, Cylinder, CylinderWires };
+struct DirectionalLight {
+  // Direction travelled by light rays. Shadows are projected opposite its X/Z component.
+  Vec3 direction{0.35f, -1.0f, 0.25f};
+  Color color{255, 255, 255, 255};
+  float intensity = 0;
+  float ambient = 1;
+};
+
+void SetDirectionalLight(Renderer& r, DirectionalLight light);
+void SetColorGrade(Renderer& r, Color tint, float strength);
+
+enum class Draw3DKind { Cube, CubeWires, Sphere, SphereWires, Cylinder, CylinderWires, Shadow };
 
 // WHY one entry: a/b/c read as sizes (cube), radius (sphere) or rTop/rBottom/height (cylinder);
 // n/m read as rings/slices; tex selects a checker texture (-1 keeps the flat color).
@@ -78,6 +92,8 @@ void DrawCylinder(Renderer& r, float x, float y, float z, float r_top, float r_b
                   int slices, Color c);
 void DrawCylinderWires(Renderer& r, float x, float y, float z, float r_top, float r_bottom,
                        float height, int slices, Color c);
+// Draw a flat, stylized ground shadow. height is the caster height above the ground.
+void DrawShadow(Renderer& r, float x, float y, float z, float radius, float height, Color c);
 [[nodiscard]] std::size_t Draw3DLogCount(const Renderer& r);
 [[nodiscard]] const Draw3DEntry* Draw3DLogAt(const Renderer& r, std::size_t i);
 [[nodiscard]] std::size_t DrawLogCount(const Renderer& r);
