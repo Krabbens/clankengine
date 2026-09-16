@@ -77,7 +77,6 @@ int Run(int argc, char** argv, const Config& cfg,
   // WHY run-trace: Clear() repaints when a window is ready, so the helper never clears after
   // BeginFrame; the 3D log therefore traces the whole run instead of one frame.
   auto renderer = clank::m2::Create();
-  auto renderer = clank::m2::Create();
   Context ctx{&playback, flags->headless, !flags->replay.empty()};
   clank::m1::Stepper stepper(1.0 / 60.0);
   const int limit = flags->shot_after >= 0 ? flags->shot_after : flags->headless ? 240 : -1;
