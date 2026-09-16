@@ -102,6 +102,9 @@ if(BUILD_TESTING)
   endforeach()
   add_test(NAME zelda-smoke COMMAND zelda --headless --shot-after 60 --dump-scene
     ${CMAKE_BINARY_DIR}/zelda_scene.json --seed 42)
+  add_test(NAME zelda-win COMMAND ${Python3_EXECUTABLE}
+    ${CMAKE_SOURCE_DIR}/test/zelda_win_test.py $<TARGET_FILE:zelda>
+    ${CMAKE_SOURCE_DIR}/examples/replays/zelda_win.clk)
 endif()
 
 function(clank_selftest name lib src inc)

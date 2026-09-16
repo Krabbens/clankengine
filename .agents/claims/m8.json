@@ -1,0 +1,15 @@
+{
+  "module": "m8",
+  "agent": "agent-zelda",
+  "branch": "a/m8-zelda-winrun",
+  "started_utc": "2026-09-16T07:28:24Z",
+  "heartbeat_utc": "2026-09-16T07:31:35Z",
+  "ttl_min": 30,
+  "intent": "Win replay proving zelda beatable deterministically",
+  "paths": [
+    "examples/",
+    "test/",
+    "spec/"
+  ],
+  "exception": null
+}
