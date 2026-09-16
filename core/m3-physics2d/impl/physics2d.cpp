@@ -58,6 +58,8 @@ Body* CreateBody(World* world, const BodyDef& def) {
   b2ShapeDef sdef = b2DefaultShapeDef();
   sdef.density = def.density;
   sdef.material.friction = def.friction;
+  // WHY always on: events are buffered until queried; no callbacks, no cost when unread.
+  sdef.enableContactEvents = true;
   if (def.shape == ShapeKind::Circle) {
     b2Circle circle = {{0.0f, 0.0f}, def.circle_r};
     b2CreateCircleShape(id, &sdef, &circle);
@@ -112,6 +114,30 @@ Vec2 GetVelocity(const Body* body) {
   if (body == nullptr) return Vec2{};
   b2Vec2 v = b2Body_GetLinearVelocity(body->id);
   return Vec2{v.x, v.y};
+}
+
+// WHY linear scan: sample worlds stay tiny; B2_ID_EQUALS compares the opaque handle.
+const Body* FindBody(const World* world, b2BodyId id) {
+  for (const Body* b : world->bodies)
+    if (B2_ID_EQUALS(b->id, id)) return b;
+  return nullptr;
+}
+
+std::vector<TouchEvent> GetTouches(World* world) {
+  std::vector<TouchEvent> out;
+  if (world == nullptr) return out;
+  const b2ContactEvents events = b2World_GetContactEvents(world->id);
+  for (int i = 0; i < events.beginCount; ++i) {
+    const Body* a = FindBody(world, b2Shape_GetBody(events.beginEvents[i].shapeIdA));
+    const Body* b = FindBody(world, b2Shape_GetBody(events.beginEvents[i].shapeIdB));
+    if (a != nullptr && b != nullptr) out.push_back(TouchEvent{a, b, true});
+  }
+  for (int i = 0; i < events.endCount; ++i) {
+    const Body* a = FindBody(world, b2Shape_GetBody(events.endEvents[i].shapeIdA));
+    const Body* b = FindBody(world, b2Shape_GetBody(events.endEvents[i].shapeIdB));
+    if (a != nullptr && b != nullptr) out.push_back(TouchEvent{a, b, false});
+  }
+  return out;
 }
 
 }  // namespace clank::m3
