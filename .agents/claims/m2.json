@@ -1,0 +1,13 @@
+{
+  "module": "m2",
+  "agent": "agent-main",
+  "branch": "a/m2-gcc-missing-init",
+  "started_utc": "2026-09-16T01:16:25Z",
+  "heartbeat_utc": "2026-09-16T01:16:25Z",
+  "ttl_min": 30,
+  "intent": "fix -Wmissing-field-initializers in DrawEntry inits (GCC CI)",
+  "paths": [
+    "core/m2-render/"
+  ],
+  "exception": null
+}
