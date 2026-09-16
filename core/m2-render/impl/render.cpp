@@ -130,7 +130,9 @@ struct TexEntry {
   Color a{};
   Color b{};
   ::Texture2D gpu{};
+  ::Model cube{};
   bool uploaded = false;
+  bool model_loaded = false;
 };
 std::unordered_map<int, TexEntry>& TexBackends() {
   static std::unordered_map<int, TexEntry> backends;
@@ -764,6 +766,7 @@ void UnloadTexture(Texture& texture) {
   auto it = TexBackends().find(texture.id);
   if (it == TexBackends().end()) return;
   // WHY window check: GPU resources die with their context; headless there is nothing to free.
+  if (it->second.model_loaded && ::IsWindowReady()) ::UnloadModel(it->second.cube);
   if (it->second.uploaded && ::IsWindowReady()) ::UnloadTexture(it->second.gpu);
   TexBackends().erase(it);
   texture.id = -1;
@@ -793,10 +796,21 @@ void DrawCubeTextured(Renderer& r, float x, float y, float z, float sx, float sy
     ::UnloadImage(img);
     TexBackends()[texture.id].uploaded = true;
   }
-  // WHY rlSetTexture: plain DrawCube emits full-face UVs, so binding reuses it as textured cube.
-  ::rlSetTexture(TexBackends()[texture.id].gpu.id);
-  ::DrawCube(::Vector3{x, y, z}, sx, sy, sz, ToRay(LitColor(r, tint)));
-  ::rlSetTexture(0);
+  if (!TexBackends()[texture.id].model_loaded) {
+    // WHY model path: raylib DrawCube emits no UV coordinates, so a tiny cached mesh is the
+    // smallest way to make the texture real on the GPU while preserving the DrawCube API.
+    auto& entry = TexBackends()[texture.id];
+    entry.cube = ::LoadModelFromMesh(::GenMeshCube(1, 1, 1));
+    if (::IsModelValid(entry.cube) && entry.cube.materialCount > 0)
+      ::SetMaterialTexture(&entry.cube.materials[0], MATERIAL_MAP_DIFFUSE, entry.gpu);
+    entry.model_loaded = true;
+  }
+  const auto& entry = TexBackends()[texture.id];
+  if (::IsModelValid(entry.cube))
+    ::DrawModelEx(entry.cube, ::Vector3{x, y, z}, ::Vector3{0, 1, 0}, 0, ::Vector3{sx, sy, sz},
+                  ToRay(LitColor(r, tint)));
+  else
+    ::DrawCube(::Vector3{x, y, z}, sx, sy, sz, ToRay(LitColor(r, tint)));
 }
 
 }  // namespace clank::m2
