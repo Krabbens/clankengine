@@ -12,13 +12,20 @@ Claim files live in .agents/claims/mX.json (m0.example.json is ignored).
 """
 from __future__ import annotations
 
+import contextlib
 import argparse
 import datetime
 import json
 import os
 import re
+import subprocess
 import sys
 import typing
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - CI remains the source of truth on Windows.
+    fcntl = None
 
 MODULES = [f"m{i}" for i in range(9)]
 MODULE_PATHS = {
@@ -35,17 +42,56 @@ MODULE_PATHS = {
 BRANCH_RE = re.compile(r"^a/m[0-8]-[a-z0-9-]{1,40}$")
 
 
-def repo_root() -> str:
+def worktree_root() -> str:
     here = os.path.dirname(os.path.abspath(__file__))
     return os.path.dirname(here) if os.path.basename(here) == "tools" else os.getcwd()
 
 
+def repo_root() -> str:
+    """Return the main worktree root shared by all linked worktrees."""
+    local = worktree_root()
+    try:
+        common = subprocess.check_output(
+            ["git", "rev-parse", "--git-common-dir"],
+            cwd=local,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        common_path = os.path.realpath(os.path.join(local, common))
+        if os.path.basename(common_path) == ".git":
+            return os.path.dirname(common_path)
+    except (OSError, subprocess.CalledProcessError):
+        pass
+    return local
+
+
 def claims_dir() -> str:
-    return os.path.join(repo_root(), ".agents", "claims")
+    return os.path.join(worktree_root(), ".agents", "claims")
+
+
+def lock_dir() -> str:
+    return os.path.join(repo_root(), ".git", "clank-claims")
 
 
 def claim_path(module: str) -> str:
     return os.path.join(claims_dir(), f"{module}.json")
+
+
+def lock_path(module: str) -> str:
+    return os.path.join(lock_dir(), f"{module}.json")
+
+
+@contextlib.contextmanager
+def claim_lock() -> typing.Iterator[None]:
+    """Serialize claim updates across linked worktrees."""
+    path = os.path.join(repo_root(), ".git", "clank-claims.lock")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "a+", encoding="utf-8") as stream:
+        if fcntl is not None:
+            fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+        yield
+        if fcntl is not None:
+            fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
 def utcnow() -> datetime.datetime:
@@ -68,15 +114,26 @@ def fail(msg: str) -> "typing.NoReturn":
 
 
 def load_claim(module: str) -> dict | None:
-    p = claim_path(module)
-    if not os.path.exists(p):
-        return None
-    with open(p, encoding="utf-8") as f:
-        try:
-            data = json.load(f)
-        except json.JSONDecodeError as e:
-            fail(f"{p} is not valid JSON: {e}")
-    return data
+    paths = [lock_path(module), claim_path(module)]
+    for p in paths:
+        if not os.path.exists(p):
+            continue
+        with open(p, encoding="utf-8") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError as e:
+                fail(f"{p} is not valid JSON: {e}")
+    return None
+
+
+def save_claim(claim: dict) -> None:
+    """Mirror the tracked CI record and the cross-worktree mutex record."""
+    paths = {claim_path(claim["module"]), lock_path(claim["module"])}
+    for p in paths:
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(claim, f, indent=2)
+            f.write("\n")
 
 
 def is_fresh(claim: dict) -> bool:
@@ -93,17 +150,30 @@ def validate_module(m: str) -> None:
         fail(f"bad module {m!r}, want one of {MODULES}")
 
 
+def current_branch() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "symbolic-ref", "--short", "HEAD"],
+            cwd=worktree_root(),
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return ""
+
+
 def cmd_list(args: argparse.Namespace) -> int:
     rows = []
-    for m in MODULES:
-        c = load_claim(m)
-        if c is None:
-            rows.append({"module": m, "status": "free", "agent": None, "branch": None,
-                         "heartbeat_utc": None, "intent": None})
-        else:
-            rows.append({"module": m, "status": "fresh" if is_fresh(c) else "stale",
-                         "agent": c.get("agent"), "branch": c.get("branch"),
-                         "heartbeat_utc": c.get("heartbeat_utc"), "intent": c.get("intent")})
+    with claim_lock():
+        for m in MODULES:
+            c = load_claim(m)
+            if c is None:
+                rows.append({"module": m, "status": "free", "agent": None, "branch": None,
+                             "heartbeat_utc": None, "intent": None})
+            else:
+                rows.append({"module": m, "status": "fresh" if is_fresh(c) else "stale",
+                             "agent": c.get("agent"), "branch": c.get("branch"),
+                             "heartbeat_utc": c.get("heartbeat_utc"), "intent": c.get("intent")})
     if args.json:
         print(json.dumps(rows, indent=2))
     else:
@@ -123,59 +193,63 @@ def cmd_claim(args: argparse.Namespace) -> int:
     branch = f"a/{args.module}-{args.topic}"
     if not BRANCH_RE.match(branch):
         fail(f"branch {branch!r} violates ^a/m[0-8]-[a-z0-9-]{{1,40}}$")
-    existing = load_claim(args.module)
-    if existing is not None and is_fresh(existing) and not args.force:
-        fail(f"{args.module} is claimed by {existing.get('agent')} on {existing.get('branch')} "
-             f"(heartbeat {existing.get('heartbeat_utc')}). Pick another module or wait for stale.")
-    if existing is not None and args.force and is_fresh(existing):
-        print(f"warning: --force takeover of fresh claim by {existing.get('agent')}; "
-              f"link the stale PR as required by AGENTS.md", file=sys.stderr)
-    now = utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-    exception = None
-    if args.exception_type:
-        if not args.exception_reason:
-            fail("--exception-type requires --exception-reason (empty reason = CI fail)")
-        if args.exception_type not in ("allow-big", "allow-cross", "allow-growth"):
-            fail(f"bad --exception-type {args.exception_type!r}")
-        exception = {"type": args.exception_type, "reason": args.exception_reason,
-                     "extra_bench": args.exception_bench or ""}
-    claim = {"module": args.module, "agent": args.agent, "branch": branch,
-             "started_utc": existing.get("started_utc", now) if existing and args.force else now,
-             "heartbeat_utc": now, "ttl_min": args.ttl_min,
-             "intent": args.intent or "", "paths": MODULE_PATHS[args.module],
-             "exception": exception}
-    os.makedirs(claims_dir(), exist_ok=True)
-    with open(claim_path(args.module), "w", encoding="utf-8") as f:
-        json.dump(claim, f, indent=2)
-        f.write("\n")
+    if os.path.realpath(worktree_root()) == os.path.realpath(repo_root()):
+        fail("claim must run from a dedicated git worktree, not the shared repository root")
+    if current_branch() != branch:
+        fail(f"current branch {current_branch()!r} != requested {branch!r}; create the worktree first")
+    with claim_lock():
+        existing = load_claim(args.module)
+        if existing is not None and is_fresh(existing) and not args.force:
+            fail(f"{args.module} is claimed by {existing.get('agent')} on {existing.get('branch')} "
+                 f"(heartbeat {existing.get('heartbeat_utc')}). Pick another module or wait for stale.")
+        if existing is not None and args.force and is_fresh(existing):
+            print(f"warning: --force takeover of fresh claim by {existing.get('agent')}; "
+                  f"link the stale PR as required by AGENTS.md", file=sys.stderr)
+        now = utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        exception = None
+        if args.exception_type:
+            if not args.exception_reason:
+                fail("--exception-type requires --exception-reason (empty reason = CI fail)")
+            if args.exception_type not in ("allow-big", "allow-cross", "allow-growth"):
+                fail(f"bad --exception-type {args.exception_type!r}")
+            exception = {"type": args.exception_type, "reason": args.exception_reason,
+                         "extra_bench": args.exception_bench or ""}
+        claim = {"module": args.module, "agent": args.agent, "branch": branch,
+                 "started_utc": existing.get("started_utc", now) if existing and args.force else now,
+                 "heartbeat_utc": now, "ttl_min": args.ttl_min,
+                 "intent": args.intent or "", "paths": MODULE_PATHS[args.module],
+                 "exception": exception}
+        save_claim(claim)
     print(f"claimed {args.module} on {branch}")
-    print(f"next: git checkout -b {branch}")
+    print("next: continue working only from this dedicated worktree")
     return 0
 
 
 def cmd_heartbeat(args: argparse.Namespace) -> int:
     validate_module(args.module)
-    c = load_claim(args.module)
-    if c is None:
-        fail(f"no claim for {args.module}; run claim first")
-    if c.get("agent") != args.agent:
-        fail(f"claim {args.module} belongs to {c.get('agent')}, not {args.agent}")
-    c["heartbeat_utc"] = utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-    with open(claim_path(args.module), "w", encoding="utf-8") as f:
-        json.dump(c, f, indent=2)
-        f.write("\n")
+    with claim_lock():
+        c = load_claim(args.module)
+        if c is None:
+            fail(f"no claim for {args.module}; run claim first")
+        if c.get("agent") != args.agent:
+            fail(f"claim {args.module} belongs to {c.get('agent')}, not {args.agent}")
+        c["heartbeat_utc"] = utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        save_claim(c)
     print(f"heartbeat {args.module} at {c['heartbeat_utc']}")
     return 0
 
 
 def cmd_release(args: argparse.Namespace) -> int:
     validate_module(args.module)
-    c = load_claim(args.module)
-    if c is None:
-        fail(f"no claim for {args.module}")
-    if c.get("agent") != args.agent:
-        fail(f"claim {args.module} belongs to {c.get('agent')}, not {args.agent}")
-    os.remove(claim_path(args.module))
+    with claim_lock():
+        c = load_claim(args.module)
+        if c is None:
+            fail(f"no claim for {args.module}")
+        if c.get("agent") != args.agent:
+            fail(f"claim {args.module} belongs to {c.get('agent')}, not {args.agent}")
+        for p in (claim_path(args.module), lock_path(args.module)):
+            if os.path.exists(p):
+                os.remove(p)
     print(f"released {args.module}")
     return 0
 

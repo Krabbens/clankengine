@@ -109,15 +109,38 @@ Goal: two agents NEVER work on the same module.
   Takeover requires `claim --force` + link to the stale PR.
 * One agent = one module at a time. No exceptions.
 
+### 5.1 Shared checkout safety (normative)
+
+Codex tasks can run concurrently against this repository. The repository root
+is not an agent workspace: never run `git switch`, `git checkout`, `git reset`,
+or a long-lived build from a checkout another task may use. Those operations
+move the shared HEAD and can silently destroy another agent's context.
+
+Each agent MUST create and use a dedicated worktree before claiming a module:
+
+```bash
+git fetch origin main
+git worktree add ../clankengine-<agent>-<topic> -b a/m3-box2d-wrap origin/main
+cd ../clankengine-<agent>-<topic>
+tools/clank-claim claim m3 --agent <agent> --topic box2d-wrap
+```
+
+`tools/clank-claim` keeps an untracked mutex in the shared `.git` directory
+and mirrors the CI claim file into the active worktree. Therefore claims are
+visible immediately across worktrees, even before the claim commit is pushed.
+All build, test, commit, and push commands MUST run from the dedicated
+worktree. Remove it only after the PR is merged and the claim is released.
+
 ## 6. Agent loop (every task)
 
-1. `git pull && tools/clank-claim list`
-2. Claim one free module.
+1. Fetch `origin/main`, create a dedicated worktree, then run
+   `tools/clank-claim list` from that worktree.
+2. Claim one free module in that worktree.
 3. Read the module `public/` headers + its tests. No drive-by edits elsewhere.
 4. Minimal change (§7 limits). Build + test locally.
 5. Visual verify (§9): `dump-scene` + `shot-after` + diff before/after.
 6. Push the branch early, open a PR, get green CI + review (§6.1), merge,
-   release claim.
+   release claim, and remove the dedicated worktree.
 
 ### 6.1 Wave flow (every wave ships via PRs, no exceptions)
 

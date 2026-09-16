@@ -123,6 +123,8 @@ add_test(NAME smoke-headless-dump COMMAND clank --headless --shot-after 60 --dum
 add_test(NAME clank-replay COMMAND ${Python3_EXECUTABLE}
   ${CMAKE_SOURCE_DIR}/test/clank_replay_test.py $<TARGET_FILE:clank>
   ${CMAKE_SOURCE_DIR}/examples/replays/drop.clk)
+add_test(NAME claim-worktree-isolation COMMAND ${Python3_EXECUTABLE}
+  ${CMAKE_SOURCE_DIR}/test/claim_worktree_test.py ${CMAKE_SOURCE_DIR}/tools/clank-claim)
 add_test(NAME minimal-sample COMMAND minimal)
 
 # WHY shell compare, unix-only: CTest cannot diff stdout; CI matrix is ubuntu-only.
