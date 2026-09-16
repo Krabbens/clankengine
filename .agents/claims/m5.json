@@ -1,0 +1,13 @@
+{
+  "module": "m5",
+  "agent": "agent-zelda",
+  "branch": "a/m5-unify-clk",
+  "started_utc": "2026-09-16T04:45:58Z",
+  "heartbeat_utc": "2026-09-16T04:46:30Z",
+  "ttl_min": 30,
+  "intent": "",
+  "paths": [
+    "core/m5-scene/"
+  ],
+  "exception": null
+}

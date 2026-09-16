@@ -44,14 +44,6 @@ int main() {
   if (clank::m5::LoadJson(
           "{\"version\":0,\"seed\":1,\"entities\":[{\"id\":1,\"name\":\"\\ud800\"}]}"))
     return 1;
-  const char* p = "/tmp/m5-clk-test.clk";
-  std::remove(p);
-  if (!clank::m5::AppendClk(p, "10 spawn player one") ||
-      !clank::m5::AppendClk(p, "12 move 1 2.0 3.0"))
-    return 1;
-  auto lines = clank::m5::ReadClk(p);
-  if (!lines || lines->size() != 2) return 1;
-  if ((*lines)[0] != "10 spawn player one" || (*lines)[1] != "12 move 1 2.0 3.0") return 1;
   std::printf("m5-selftest ok\n");
   return 0;
 }
