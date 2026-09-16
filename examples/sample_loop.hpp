@@ -79,6 +79,10 @@ int Run(int argc, char** argv, const Config& cfg,
   clank::m1::Stepper stepper(1.0 / 60.0);
   const int limit = flags->shot_after >= 0 ? flags->shot_after : flags->headless ? 240 : -1;
   std::vector<double> timings;
+  std::vector<double> draw_timings;
+  std::vector<double> frame_timings;
+  std::vector<double> draw2d_counts;
+  std::vector<double> draw3d_counts;
   auto update = [&](clank::m1::Frame f, double dt) {
     const auto start = std::chrono::steady_clock::now();
     step(*state, ctx, f.number, dt);
@@ -98,9 +102,13 @@ int Run(int argc, char** argv, const Config& cfg,
       }
       if (stepper.paused() && IsKeyPressed(KEY_N)) stepper.StepOnce(update);
     }
-    if (limit < 0 || stepper.next() < limit) stepper.Advance(1, update);
+    const bool stepped = (limit < 0 || stepper.next() < limit);
+    const auto frame_start = std::chrono::steady_clock::now();
+    if (stepped) stepper.Advance(1, update);
     const bool done = limit >= 0 && stepper.next() == limit;
     if (!flags->headless) clank::m1::BeginFrame(12, 19, 30, 255);
+    // WHY timed submit: draw calls cost CPU even headless (logs); present/swap stays unmeasured.
+    const auto draw_start = std::chrono::steady_clock::now();
     clank::m2::Clear(renderer, {12, 19, 30, 255});
     draw(*state, renderer);
     // WHY convert once: Config keeps raylib colors for raw callers, the facade takes its own.
@@ -116,6 +124,14 @@ int Run(int argc, char** argv, const Config& cfg,
     clank::m2::DrawText(
         renderer, TextFormat("%s  /  %04d", stepper.paused() ? "PAUSED" : "60 HZ", stepper.next()),
         1030, 684, 18, accent);
+    const auto draw_end = std::chrono::steady_clock::now();
+    if (stepped && limit >= 0) {
+      using Ms = std::chrono::duration<double, std::milli>;
+      draw_timings.push_back(Ms(draw_end - draw_start).count());
+      frame_timings.push_back(Ms(draw_end - frame_start).count());
+      draw2d_counts.push_back(static_cast<double>(clank::m2::DrawLogCount(renderer)));
+      draw3d_counts.push_back(static_cast<double>(clank::m2::Draw3DLogCount(renderer)));
+    }
     if (done && flags->shot_after >= 0) {
       const std::string path = std::string(cfg.name) + "_frame" + std::to_string(limit) + ".png";
       auto shot = clank::m2::TakeScreenshot(renderer, path);
@@ -140,9 +156,23 @@ int Run(int argc, char** argv, const Config& cfg,
   }
   if (!timings.empty()) {
     std::sort(timings.begin(), timings.end());
-    auto p = [&](double q) { return timings[static_cast<size_t>((timings.size() - 1) * q)]; };
-    std::fprintf(stderr, "%s: frames=%d update_ms p50=%.4f p95=%.4f p99=%.4f\n", cfg.name,
-                 stepper.next(), p(.50), p(.95), p(.99));
+    std::sort(draw_timings.begin(), draw_timings.end());
+    std::sort(frame_timings.begin(), frame_timings.end());
+    std::sort(draw2d_counts.begin(), draw2d_counts.end());
+    std::sort(draw3d_counts.begin(), draw3d_counts.end());
+    auto p = [&](const std::vector<double>& v, double q) {
+      return v[static_cast<size_t>((v.size() - 1) * q)];
+    };
+    // WHY one line: agents scrape a single stderr row per run (update = sim+physics step).
+    std::fprintf(stderr,
+                 "%s: frames=%d update_ms p50=%.4f p95=%.4f p99=%.4f "
+                 "draw_ms p50=%.4f p95=%.4f p99=%.4f frame_ms p50=%.4f p95=%.4f p99=%.4f "
+                 "draw2d p50=%.0f p95=%.0f draw3d p50=%.0f p95=%.0f\n",
+                 cfg.name, stepper.next(), p(timings, .50), p(timings, .95), p(timings, .99),
+                 p(draw_timings, .50), p(draw_timings, .95), p(draw_timings, .99),
+                 p(frame_timings, .50), p(frame_timings, .95), p(frame_timings, .99),
+                 p(draw2d_counts, .50), p(draw2d_counts, .95), p(draw3d_counts, .50),
+                 p(draw3d_counts, .95));
   }
   return result;
 }

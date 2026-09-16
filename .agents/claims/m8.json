@@ -1,0 +1,15 @@
+{
+  "module": "m8",
+  "agent": "agent-zelda",
+  "branch": "a/m8-frame-bench",
+  "started_utc": "2026-09-16T14:46:21Z",
+  "heartbeat_utc": "2026-09-16T14:52:24Z",
+  "ttl_min": 30,
+  "intent": "Full frame timings plus draw call counts in sample harness",
+  "paths": [
+    "examples/",
+    "test/",
+    "spec/"
+  ],
+  "exception": null
+}
