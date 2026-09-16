@@ -1,13 +1,13 @@
 // clank app: agent-first game loop on m0 (flags) + m1 (loop) + m2 (render) + m5 (scene).
 // Logs -> stderr; machine-readable result paths -> stdout.
+#include <cstdio>
+#include <fstream>
+#include <string>
+
 #include "m0/foundation.hpp"
 #include "m1/loop.hpp"
 #include "m2/render.hpp"
 #include "m5/scene.hpp"
-
-#include <cstdio>
-#include <fstream>
-#include <string>
 
 namespace {
 
@@ -56,12 +56,11 @@ int main(int argc, char** argv) {
   }
 
   clank::m5::Scene scene = DemoScene(flags.seed);
-  const int frames = flags.shot_after >= 0 ? flags.shot_after : 60;
+  // WHY N-1: frames run 0..N-1, so the shot shows state after exactly N frames.
+  const int frames = flags.shot_after > 0 ? flags.shot_after : 60;
   std::fprintf(stderr, "clank: %s frames=%d seed=%d\n", flags.headless ? "headless" : "windowed",
                frames, flags.seed);
-  auto update = [&](clank::m1::Frame, double dt) {
-    scene.entities[0].x += static_cast<float>(dt);
-  };
+  auto update = [&](clank::m1::Frame, double dt) { scene.entities[0].x += static_cast<float>(dt); };
   clank::m2::Renderer renderer = clank::m2::Create();
 
   if (flags.headless) {
@@ -84,7 +83,7 @@ int main(int argc, char** argv) {
       clank::m1::BeginFrame(20, 20, 30, 255);
       clank::m2::DrawRect(renderer, scene.entities[0].x * 60.0f, 300.0f, 40.0f, 40.0f,
                           {255, 255, 255, 255});
-      if (flags.shot_after >= 0 && frame == flags.shot_after) {
+      if (flags.shot_after > 0 && frame == flags.shot_after - 1) {
         // WHY inside draw: real TakeScreenshot needs an open window + active frame.
         auto shot = clank::m2::TakeScreenshot(renderer, ShotPath(frame));
         if (shot) std::printf("%s\n", ShotPath(frame).c_str());
