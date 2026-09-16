@@ -37,8 +37,53 @@ std::unordered_map<int, Camera>& Cameras() {
   return cameras;
 }
 
+std::unordered_map<int, DirectionalLight>& Lights() {
+  static std::unordered_map<int, DirectionalLight> lights;
+  return lights;
+}
+
+struct Grade {
+  Color tint{255, 255, 255, 255};
+  float strength = 0;
+};
+std::unordered_map<int, Grade>& Grades() {
+  static std::unordered_map<int, Grade> grades;
+  return grades;
+}
+
+unsigned char ScaleChannel(unsigned char c, float scale) {
+  return static_cast<unsigned char>(std::clamp(std::lround(c * scale), 0L, 255L));
+}
+
+Color GradeColor(const Renderer& r, Color c) {
+  auto it = Grades().find(r.id);
+  if (!r.valid || it == Grades().end()) return c;
+  const float strength = std::clamp(it->second.strength, 0.0f, 1.0f);
+  const auto factor = [&](unsigned char tint) {
+    return (1.0f - strength) + strength * static_cast<float>(tint) / 255.0f;
+  };
+  return Color{ScaleChannel(c.r, factor(it->second.tint.r)),
+               ScaleChannel(c.g, factor(it->second.tint.g)),
+               ScaleChannel(c.b, factor(it->second.tint.b)), c.a};
+}
+
+Color LitColor(const Renderer& r, Color c) {
+  auto it = Lights().find(r.id);
+  if (!r.valid || it == Lights().end()) return GradeColor(r, c);
+  const DirectionalLight& light = it->second;
+  const float length =
+      std::sqrt(light.direction.x * light.direction.x + light.direction.y * light.direction.y +
+                light.direction.z * light.direction.z);
+  const float down = length > 1e-6f ? std::max(0.0f, -light.direction.y / length) : 1.0f;
+  const float brightness = std::max(0.0f, light.ambient + light.intensity * down);
+  return GradeColor(r, Color{ScaleChannel(c.r, brightness * light.color.r / 255.0f),
+                             ScaleChannel(c.g, brightness * light.color.g / 255.0f),
+                             ScaleChannel(c.b, brightness * light.color.b / 255.0f), c.a});
+}
+
 void Push(const Renderer& r, DrawEntry e) {
   auto it = Logs().find(r.id);
+  e.color = GradeColor(r, e.color);
   if (r.valid && it != Logs().end()) it->second.push_back(std::move(e));
 }
 
@@ -49,6 +94,7 @@ std::unordered_map<int, std::vector<Draw3DEntry>>& Logs3D() {
 
 void Push3D(const Renderer& r, Draw3DEntry e) {
   auto it = Logs3D().find(r.id);
+  e.color = LitColor(r, e.color);
   if (r.valid && it != Logs3D().end()) it->second.push_back(std::move(e));
 }
 
@@ -92,6 +138,19 @@ void RasterChecker(::Image* image, int x, int y, int w, int h, const TexEntry& t
                            ToRay(TintColor(cell, tint)));
     }
 }
+
+void RasterEllipse(::Image* image, int cx, int cy, int rx, int ry, ::Color color) {
+  if (rx <= 0 || ry <= 0) return;
+  const int y0 = std::max(0, cy - ry);
+  const int y1 = std::min(image->height - 1, cy + ry);
+  for (int y = y0; y <= y1; ++y) {
+    const float dy = static_cast<float>(y - cy) / static_cast<float>(ry);
+    const int span = static_cast<int>(std::lround(rx * std::sqrt(std::max(0.0f, 1.0f - dy * dy))));
+    const int x0 = std::max(0, cx - span);
+    const int x1 = std::min(image->width - 1, cx + span);
+    for (int x = x0; x <= x1; ++x) ::ImageDrawPixel(image, x, y, color);
+  }
+}
 }  // namespace
 
 Renderer Create() {
@@ -100,6 +159,8 @@ Renderer Create() {
   Logs3D()[id] = {};
   Backgrounds()[id] = {};
   Cameras()[id] = {};
+  Lights()[id] = {};
+  Grades()[id] = {};
   return Renderer{.id = id, .valid = true};
 }
 
@@ -108,6 +169,8 @@ void Destroy(Renderer& r) {
   Logs3D().erase(r.id);
   Backgrounds().erase(r.id);
   Cameras().erase(r.id);
+  Lights().erase(r.id);
+  Grades().erase(r.id);
   r.id = -1;
   r.valid = false;
 }
@@ -120,10 +183,20 @@ void Clear(Renderer& r, Color c) {
   auto it3 = Logs3D().find(r.id);
   if (r.valid && it3 != Logs3D().end()) it3->second.clear();
   auto bg = Backgrounds().find(r.id);
-  if (r.valid && bg != Backgrounds().end()) bg->second = c;
+  if (r.valid && bg != Backgrounds().end()) bg->second = GradeColor(r, c);
   auto camera = Cameras().find(r.id);
   if (r.valid && camera != Cameras().end()) camera->second = {};
-  if (::IsWindowReady()) ::ClearBackground(ToRay(c));
+  if (::IsWindowReady()) ::ClearBackground(ToRay(GradeColor(r, c)));
+}
+
+void SetDirectionalLight(Renderer& r, DirectionalLight light) {
+  auto it = Lights().find(r.id);
+  if (r.valid && it != Lights().end()) it->second = light;
+}
+
+void SetColorGrade(Renderer& r, Color tint, float strength) {
+  auto it = Grades().find(r.id);
+  if (r.valid && it != Grades().end()) it->second = Grade{tint, strength};
 }
 
 void DrawRect(Renderer& r, float x, float y, float w, float h, Color c) {
@@ -131,14 +204,15 @@ void DrawRect(Renderer& r, float x, float y, float w, float h, Color c) {
        DrawEntry{.kind = DrawKind::Rect, .x = x, .y = y, .w = w, .h = h, .text = {}, .color = c});
   // WHY: DrawLog is headless truth; mirror to screen only when a window exists.
   // Precondition: ::IsWindowReady() must be true before ::DrawRectangleV().
-  if (::IsWindowReady()) ::DrawRectangleV(::Vector2{x, y}, ::Vector2{w, h}, ToRay(c));
+  if (::IsWindowReady())
+    ::DrawRectangleV(::Vector2{x, y}, ::Vector2{w, h}, ToRay(GradeColor(r, c)));
 }
 
 void DrawCircle(Renderer& r, float x, float y, float radius, Color c) {
   Push(r, DrawEntry{.kind = DrawKind::Circle, .x = x, .y = y, .w = radius, .text = {}, .color = c});
   // WHY: keep float center in V variant; skip GPU work headless.
   // Precondition: ::IsWindowReady() must be true before ::DrawCircleV().
-  if (::IsWindowReady()) ::DrawCircleV(::Vector2{x, y}, radius, ToRay(c));
+  if (::IsWindowReady()) ::DrawCircleV(::Vector2{x, y}, radius, ToRay(GradeColor(r, c)));
 }
 
 void DrawTriangle(Renderer& r, float x1, float y1, float x2, float y2, float x3, float y3,
@@ -155,7 +229,8 @@ void DrawTriangle(Renderer& r, float x1, float y1, float x2, float y2, float x3,
   // WHY: DrawLog is headless truth; mirror to screen only when a window exists.
   // Precondition: ::IsWindowReady() must be true before ::DrawTriangle().
   if (::IsWindowReady())
-    ::DrawTriangle(::Vector2{x1, y1}, ::Vector2{x2, y2}, ::Vector2{x3, y3}, ToRay(c));
+    ::DrawTriangle(::Vector2{x1, y1}, ::Vector2{x2, y2}, ::Vector2{x3, y3},
+                   ToRay(GradeColor(r, c)));
 }
 
 void DrawText(Renderer& r, const std::string& text, float x, float y, float size, Color c) {
@@ -164,16 +239,17 @@ void DrawText(Renderer& r, const std::string& text, float x, float y, float size
   // Precondition: ::IsWindowReady() must be true before ::DrawText().
   if (::IsWindowReady())
     ::DrawText(text.c_str(), static_cast<int>(x), static_cast<int>(y), static_cast<int>(size),
-               ToRay(c));
+               ToRay(GradeColor(r, c)));
 }
 
 // WHY: public header stays stdlib-only so translate the camera at the boundary, like colors.
 ::Camera3D ToRayCam(Camera camera) {
-  return ::Camera3D{{camera.position.x, camera.position.y, camera.position.z},
-                    {camera.target.x, camera.target.y, camera.target.z},
-                    {camera.up.x, camera.up.y, camera.up.z},
-                    camera.fov,
-                    CAMERA_PERSPECTIVE};
+  return ::Camera3D{
+      {camera.position.x, camera.position.y, camera.position.z},
+      {camera.target.x, camera.target.y, camera.target.z},
+      {camera.up.x, camera.up.y, camera.up.z},
+      camera.fov,
+      camera.projection == Projection::Orthographic ? CAMERA_ORTHOGRAPHIC : CAMERA_PERSPECTIVE};
 }
 
 void BeginMode3D(Renderer& r, Camera camera) {
@@ -201,20 +277,20 @@ void DrawCube(Renderer& r, float x, float y, float z, float sx, float sy, float 
   PushCube(r, Draw3DKind::Cube, x, y, z, sx, sy, sz, c);
   // WHY: Draw3DLog is headless truth; mirror to screen only when a window exists.
   // Precondition: ::IsWindowReady() must be true before ::DrawCube().
-  if (::IsWindowReady()) ::DrawCube(::Vector3{x, y, z}, sx, sy, sz, ToRay(c));
+  if (::IsWindowReady()) ::DrawCube(::Vector3{x, y, z}, sx, sy, sz, ToRay(LitColor(r, c)));
 }
 
 void DrawCubeWires(Renderer& r, float x, float y, float z, float sx, float sy, float sz, Color c) {
   PushCube(r, Draw3DKind::CubeWires, x, y, z, sx, sy, sz, c);
   // Precondition: ::IsWindowReady() must be true before ::DrawCubeWires().
-  if (::IsWindowReady()) ::DrawCubeWires(::Vector3{x, y, z}, sx, sy, sz, ToRay(c));
+  if (::IsWindowReady()) ::DrawCubeWires(::Vector3{x, y, z}, sx, sy, sz, ToRay(LitColor(r, c)));
 }
 
 void DrawSphere(Renderer& r, float x, float y, float z, float radius, Color c) {
   Push3D(r,
          Draw3DEntry{.kind = Draw3DKind::Sphere, .x = x, .y = y, .z = z, .a = radius, .color = c});
   // Precondition: ::IsWindowReady() must be true before ::DrawSphere().
-  if (::IsWindowReady()) ::DrawSphere(::Vector3{x, y, z}, radius, ToRay(c));
+  if (::IsWindowReady()) ::DrawSphere(::Vector3{x, y, z}, radius, ToRay(LitColor(r, c)));
 }
 
 void DrawSphereWires(Renderer& r, float x, float y, float z, float radius, int rings, int slices,
@@ -228,7 +304,8 @@ void DrawSphereWires(Renderer& r, float x, float y, float z, float radius, int r
                         .m = slices,
                         .color = c});
   // Precondition: ::IsWindowReady() must be true before ::DrawSphereWires().
-  if (::IsWindowReady()) ::DrawSphereWires(::Vector3{x, y, z}, radius, rings, slices, ToRay(c));
+  if (::IsWindowReady())
+    ::DrawSphereWires(::Vector3{x, y, z}, radius, rings, slices, ToRay(LitColor(r, c)));
 }
 
 void DrawCylinder(Renderer& r, float x, float y, float z, float r_top, float r_bottom, float height,
@@ -244,7 +321,7 @@ void DrawCylinder(Renderer& r, float x, float y, float z, float r_top, float r_b
                         .color = c});
   // Precondition: ::IsWindowReady() must be true before ::DrawCylinder().
   if (::IsWindowReady())
-    ::DrawCylinder(::Vector3{x, y, z}, r_top, r_bottom, height, slices, ToRay(c));
+    ::DrawCylinder(::Vector3{x, y, z}, r_top, r_bottom, height, slices, ToRay(LitColor(r, c)));
 }
 
 void DrawCylinderWires(Renderer& r, float x, float y, float z, float r_top, float r_bottom,
@@ -260,7 +337,28 @@ void DrawCylinderWires(Renderer& r, float x, float y, float z, float r_top, floa
                         .color = c});
   // Precondition: ::IsWindowReady() must be true before ::DrawCylinderWires().
   if (::IsWindowReady())
-    ::DrawCylinderWires(::Vector3{x, y, z}, r_top, r_bottom, height, slices, ToRay(c));
+    ::DrawCylinderWires(::Vector3{x, y, z}, r_top, r_bottom, height, slices, ToRay(LitColor(r, c)));
+}
+
+void DrawShadow(Renderer& r, float x, float y, float z, float radius, float height, Color c) {
+  DirectionalLight light{};
+  auto it = Lights().find(r.id);
+  if (r.valid && it != Lights().end()) light = it->second;
+  const float down = std::max(0.05f, -light.direction.y);
+  const float projection = std::max(0.0f, height) / down;
+  const float sx = x - light.direction.x * projection;
+  const float sz = z - light.direction.z * projection;
+  const Color shaded = LitColor(r, c);
+  Push3D(r, Draw3DEntry{.kind = Draw3DKind::Shadow,
+                        .x = sx,
+                        .y = y,
+                        .z = sz,
+                        .a = radius,
+                        .b = radius * 0.65f,
+                        .c = 0.01f,
+                        .color = c});
+  if (::IsWindowReady())
+    ::DrawCylinder(::Vector3{sx, y + 0.005f, sz}, radius, radius * 0.65f, 0.01f, 24, ToRay(shaded));
 }
 
 std::size_t Draw3DLogCount(const Renderer& r) {
@@ -323,7 +421,12 @@ std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::st
   }
   ::Image image = ::GenImageColor(kHeadlessWidth, kHeadlessHeight, ToRay(bg->second));
   if (!image.data) return std::unexpected("m2: cannot allocate headless image");
-  constexpr float scale = 42.0f;
+  const Camera& view = camera->second;
+  // WHY use fov only for orthographic: raylib interprets it as vertical world size there;
+  // perspective keeps the legacy scale so existing goldens remain byte-stable.
+  const float scale = view.projection == Projection::Orthographic
+                          ? kHeadlessHeight / std::max(1.0f, std::abs(view.fov))
+                          : 42.0f;
   // WHY top-down: the headless contract needs useful 3D evidence without a GPU; the samples'
   // fixed cameras all look at the X/Z plane, so this projection stays deterministic and compact.
   for (const Draw3DEntry& e : log3d->second) {
@@ -361,6 +464,14 @@ std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::st
       case Draw3DKind::CylinderWires:
         ::ImageDrawCircleLines(&image, x, y, radius, ToRay(e.color));
         break;
+      case Draw3DKind::Shadow: {
+        const int shadow_width =
+            std::max(1, static_cast<int>(std::lround(std::abs(e.a) * 2 * scale)));
+        const int shadow_height =
+            std::max(1, static_cast<int>(std::lround(std::abs(e.b) * 2 * scale)));
+        RasterEllipse(&image, x, y, shadow_width / 2, shadow_height / 2, ToRay(e.color));
+        break;
+      }
     }
   }
   for (const DrawEntry& e : log->second) {
@@ -571,7 +682,7 @@ void DrawCubeTextured(Renderer& r, float x, float y, float z, float sx, float sy
   if (!::IsWindowReady()) return;
   const TexEntry* tex = FindTex(texture.id);
   if (tex == nullptr) {
-    ::DrawCube(::Vector3{x, y, z}, sx, sy, sz, ToRay(tint));
+    ::DrawCube(::Vector3{x, y, z}, sx, sy, sz, ToRay(LitColor(r, tint)));
     return;
   }
   if (!tex->uploaded) {
@@ -583,7 +694,7 @@ void DrawCubeTextured(Renderer& r, float x, float y, float z, float sx, float sy
   }
   // WHY rlSetTexture: plain DrawCube emits full-face UVs, so binding reuses it as textured cube.
   ::rlSetTexture(TexBackends()[texture.id].gpu.id);
-  ::DrawCube(::Vector3{x, y, z}, sx, sy, sz, ToRay(tint));
+  ::DrawCube(::Vector3{x, y, z}, sx, sy, sz, ToRay(LitColor(r, tint)));
   ::rlSetTexture(0);
 }
 

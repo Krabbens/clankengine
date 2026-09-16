@@ -1,0 +1,13 @@
+{
+  "module": "m2",
+  "agent": "agent-main",
+  "branch": "a/m2-ortho-lighting",
+  "started_utc": "2026-09-16T15:43:08Z",
+  "heartbeat_utc": "2026-09-16T15:49:22Z",
+  "ttl_min": 30,
+  "intent": "Add orthographic camera and deterministic directional-light color controls",
+  "paths": [
+    "core/m2-render/"
+  ],
+  "exception": null
+}

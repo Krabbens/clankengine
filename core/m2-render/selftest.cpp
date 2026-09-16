@@ -86,6 +86,40 @@ int main() {
   auto different = clank::m2::CompareImages(path, shot_b, 0.0);
   if (!different || *different) return 1;
   if (clank::m2::CompareImages(path, "/tmp/m2-selftest-nope.png", 1.0)) return 1;
+  clank::m2::SetColorGrade(r, {128, 255, 255, 255}, 0.5f);
+  clank::m2::Clear(r, white);
+  clank::m2::DrawRect(r, 0, 0, 1, 1, white);
+  const auto* graded = clank::m2::DrawLogAt(r, 0);
+  if (!graded || graded->color.r != 192 || graded->color.g != 255) return 1;
+  clank::m2::SetDirectionalLight(r, {{0.5f, -1, 0.25f}, {128, 255, 255, 255}, 1, 0.25f});
+  clank::m2::SetColorGrade(r, white, 0);
+  clank::m2::Clear(r, white);
+  clank::m2::BeginMode3D(r, cam);
+  clank::m2::DrawCube(r, 0, 0, 0, 1, 1, 1, white);
+  clank::m2::DrawShadow(r, 0, 0, 0, 1, 2, {0, 0, 0, 160});
+  clank::m2::EndMode3D(r);
+  const auto* lit = clank::m2::Draw3DLogAt(r, 0);
+  const auto* shadow = clank::m2::Draw3DLogAt(r, 1);
+  if (!lit || !shadow || lit->color.r >= lit->color.g ||
+      shadow->kind != clank::m2::Draw3DKind::Shadow || shadow->x == 0 || shadow->z == 0)
+    return 1;
+  clank::m2::SetDirectionalLight(r, {});
+  clank::m2::Clear(r, {0, 0, 0, 255});
+  clank::m2::BeginMode3D(r, cam);
+  clank::m2::DrawCube(r, 0, 0, 0, 1, 1, 1, white);
+  clank::m2::EndMode3D(r);
+  const std::string perspective = "/tmp/m2-selftest-perspective.png";
+  if (!clank::m2::TakeScreenshot(r, perspective)) return 1;
+  clank::m2::Clear(r, {0, 0, 0, 255});
+  cam.projection = clank::m2::Projection::Orthographic;
+  cam.fov = 8;
+  clank::m2::BeginMode3D(r, cam);
+  clank::m2::DrawCube(r, 0, 0, 0, 1, 1, 1, white);
+  clank::m2::EndMode3D(r);
+  const std::string orthographic = "/tmp/m2-selftest-orthographic.png";
+  if (!clank::m2::TakeScreenshot(r, orthographic)) return 1;
+  auto projections = clank::m2::CompareImages(perspective, orthographic, 0.0);
+  if (!projections || *projections) return 1;
   const std::string not_png = "/tmp/m2-selftest-notpng.txt";
   {
     std::ofstream o(not_png);
@@ -97,6 +131,8 @@ int main() {
   std::remove(shot_b.c_str());
   std::remove(shot_3d.c_str());
   std::remove(shot_blank.c_str());
+  std::remove(perspective.c_str());
+  std::remove(orthographic.c_str());
   std::remove(not_png.c_str());
   // WHY no device asserts: CI has no audio hardware, so only the silent path is provable here.
   clank::m2::Audio audio = clank::m2::OpenAudio();
