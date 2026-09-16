@@ -1,0 +1,13 @@
+{
+  "module": "m3",
+  "agent": "agent-zelda",
+  "branch": "a/m3-sensor-overlap",
+  "started_utc": "2026-09-16T08:00:21Z",
+  "heartbeat_utc": "2026-09-16T08:09:27Z",
+  "ttl_min": 30,
+  "intent": "Box2D sensor overlap events closing the contacts TODO",
+  "paths": [
+    "core/m3-physics2d/"
+  ],
+  "exception": null
+}
