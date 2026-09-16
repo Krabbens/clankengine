@@ -119,11 +119,16 @@ std::expected<void, std::string> TakeScreenshot(const Renderer& r, const std::st
     ::rlDrawRenderBatchActive();
     // WHY two-path check: raylib 5.5 TakeScreenshot drops directories and saves
     // basename(file) to cwd (observed in CI). Honor the contract either way.
-    ::TakeScreenshot(path.c_str());
+    // WHY pre-remove: a stale file at path (e.g. headless stub from an earlier
+    // run) would fake success; both candidates are ours to overwrite.
     namespace fs = std::filesystem;
-    std::error_code ec;
-    if (fs::exists(path, ec) && !ec) return {};
     const std::string base = path.substr(path.find_last_of("/\\") + 1);
+    std::error_code ec;
+    fs::remove(path, ec);
+    if (base != path) fs::remove(base, ec);
+    ec.clear();
+    ::TakeScreenshot(path.c_str());
+    if (fs::exists(path, ec) && !ec) return {};
     if (base != path && fs::exists(base, ec) && !ec) {
       fs::copy_file(base, path, fs::copy_options::overwrite_existing, ec);
       std::error_code rm_ec;
