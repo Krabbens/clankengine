@@ -353,14 +353,14 @@ struct Game {
     }
     m2::EndMode3D(renderer);
     m2::DrawText(renderer, "03 / ZELDA", 44, 146, 20, {226, 235, 244, 255});
-    m2::DrawText(renderer,
-                 TextFormat("HP %.0f/5   RUPEE %d/%d   %s", static_cast<double>(hp), rupees,
-                            kRupeeCount,
-                            status == 1   ? "WIN!"
-                            : status == 2 ? "DEAD"
-                            : open        ? "EXIT OPEN"
-                                          : ""),
-                 44, 184, 18, {135, 158, 181, 255});
+    m2::DrawText(
+        renderer,
+        TextFormat("HP %.0f/5   RUPEE %d/%d   %s", static_cast<double>(hp), rupees, kRupeeCount,
+                   status == 1   ? "WIN!"
+                   : status == 2 ? "DEAD"
+                   : open        ? "EXIT OPEN"
+                                 : ""),
+        44, 184, 18, {135, 158, 181, 255});
     m2::DrawText(renderer, "Find 8 rupees, reach gold pad", 44, 210, 18, {135, 158, 181, 255});
     m2::DrawText(renderer, "3D TOP-DOWN", 1000, 146, 20, {70, 218, 195, 255});
     m2::DrawText(renderer, "Arrows/WASD move, Space sword", 1000, 184, 18, {135, 158, 181, 255});
