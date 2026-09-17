@@ -8,6 +8,12 @@
 #include <cstring>
 namespace clank::m5 {
 namespace {
+bool ValidEntityFields(const Entity& entity) {
+  return entity.id != -1 && std::isfinite(entity.x) && std::isfinite(entity.y) &&
+         std::isfinite(entity.angle) && std::isfinite(entity.sx) && std::isfinite(entity.sy) &&
+         std::isfinite(entity.z);
+}
+
 // WHY: dump must survive spaces/quotes in names with only stdlib, no JSON dep.
 void AppendEscaped(std::string& o, const std::string& s) {
   o.push_back('"');
@@ -199,6 +205,39 @@ bool TakeEntity(Cur& c, Entity& e) {
   return id && name && x && y && a && sx && sy;
 }
 }  // namespace
+
+std::expected<int, std::string> SpawnEntity(Scene& scene, Entity entity) {
+  if (!ValidEntityFields(entity)) return std::unexpected("malformed entity");
+  for (const Entity& existing : scene.entities)
+    if (existing.id == entity.id)
+      return std::unexpected("duplicate entity id " + std::to_string(entity.id));
+  Scene candidate = scene;
+  candidate.entities.push_back(entity);
+  if (auto valid = ResolveWorldTransforms(candidate); !valid) {
+    return std::unexpected(valid.error());
+  }
+  scene.entities.push_back(std::move(entity));
+  return scene.entities.back().id;
+}
+
+std::expected<Entity, std::string> DestroyEntity(Scene& scene, ComponentStore& store, int id) {
+  const auto it = std::find_if(scene.entities.begin(), scene.entities.end(),
+                               [id](const Entity& entity) { return entity.id == id; });
+  if (it == scene.entities.end()) {
+    return std::unexpected("missing entity id " + std::to_string(id));
+  }
+  if (std::any_of(scene.entities.begin(), scene.entities.end(),
+                  [id](const Entity& entity) { return entity.parent == id; }))
+    return std::unexpected("entity has children " + std::to_string(id));
+  const Entity removed = *it;
+  scene.entities.erase(it);
+  store.components.erase(
+      std::remove_if(store.components.begin(), store.components.end(),
+                     [id](const Component& component) { return component.owner == id; }),
+      store.components.end());
+  return removed;
+}
+
 std::string DumpJson(const Scene& s) {
   // WHY version 0 on wire: bump + golden regen ride the m8 schema PR.
   std::string o = "{\"version\":0,\"seed\":" + std::to_string(s.seed) + ",\"entities\":[";
