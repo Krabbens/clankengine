@@ -28,6 +28,7 @@
 ### DONE
 
 - `M3-QUERY-AABB-001` — deterministic Box2D AABB body query; merged PR #114; m3 selftest and CI green.
+- `M4-SET-VELOCITY-001` — null/static-safe Box3D velocity control with deterministic scripted selftest; merged PR #115.
 - `M5-COMPONENTS-001` — owner-validated ComponentStore and deterministic lookup; merged PRs #110 and #113.
 - `M6-ACTION-MAP-001` — named action bindings over `.clk` replay; merged PR #111.
 - `M7-WINDOWS-SHOT-001` — stdlib-only portable shot runner and tests; merged PR #112.
