@@ -44,6 +44,7 @@ void Step(World* world, float dt);
 Vec3 GetPosition(const Body* body);
 float GetAngle(const Body* body);
 Vec3 GetVelocity(const Body* body);
+void SetVelocity(Body* body, Vec3 velocity);
 // WHY snapshot, not drain: Box3D keeps events until the next Step, so this reflects the last step.
 struct TouchEvent {
   const Body* a = nullptr;

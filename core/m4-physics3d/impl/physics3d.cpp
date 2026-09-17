@@ -139,6 +139,11 @@ Vec3 GetVelocity(const Body* body) {
   return Vec3{v.x, v.y, v.z};
 }
 
+void SetVelocity(Body* body, Vec3 velocity) {
+  if (body == nullptr || b3Body_GetType(body->id) != b3_dynamicBody) return;
+  b3Body_SetLinearVelocity(body->id, {velocity.x, velocity.y, velocity.z});
+}
+
 // WHY linear scan: sample worlds stay tiny; B3_ID_EQUALS compares the opaque handle.
 const Body* FindBody(const World* world, b3BodyId id) {
   for (const Body* b : world->bodies)
