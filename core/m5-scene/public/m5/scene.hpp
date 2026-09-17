@@ -32,6 +32,10 @@ struct WorldTransform {
   // 2x2 basis stores exact rotation/scale composition, including shear.
   float m00 = 1, m01 = 0, m10 = 0, m11 = 1;
 };
+// WHY append-only: callers can retain order while IDs remain stable across removal.
+std::expected<int, std::string> SpawnEntity(Scene& scene, Entity entity);
+// WHY require the store: removing owned components prevents dangling ownership after destroy.
+std::expected<Entity, std::string> DestroyEntity(Scene& scene, ComponentStore& store, int id);
 std::string DumpJson(const Scene& scene);
 std::expected<Scene, std::string> LoadJson(const std::string& text);
 // WHY return the same order: callers can join resolved transforms to their input entities without
