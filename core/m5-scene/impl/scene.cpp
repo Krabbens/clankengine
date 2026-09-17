@@ -213,8 +213,9 @@ std::expected<int, std::string> SpawnEntity(Scene& scene, Entity entity) {
       return std::unexpected("duplicate entity id " + std::to_string(entity.id));
   Scene candidate = scene;
   candidate.entities.push_back(entity);
-  if (auto valid = ResolveWorldTransforms(candidate); !valid)
+  if (auto valid = ResolveWorldTransforms(candidate); !valid) {
     return std::unexpected(valid.error());
+  }
   scene.entities.push_back(std::move(entity));
   return scene.entities.back().id;
 }
@@ -222,8 +223,9 @@ std::expected<int, std::string> SpawnEntity(Scene& scene, Entity entity) {
 std::expected<Entity, std::string> DestroyEntity(Scene& scene, ComponentStore& store, int id) {
   const auto it = std::find_if(scene.entities.begin(), scene.entities.end(),
                                [id](const Entity& entity) { return entity.id == id; });
-  if (it == scene.entities.end())
+  if (it == scene.entities.end()) {
     return std::unexpected("missing entity id " + std::to_string(id));
+  }
   if (std::any_of(scene.entities.begin(), scene.entities.end(),
                   [id](const Entity& entity) { return entity.parent == id; }))
     return std::unexpected("entity has children " + std::to_string(id));

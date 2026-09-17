@@ -102,8 +102,8 @@ int main() {
       clank::m5::DestroyEntity(actors, actor_store, 7))
     return 1;
   auto destroyed = clank::m5::DestroyEntity(actors, actor_store, 8);
-  if (!destroyed || destroyed->id != 8 || actors.entities.size() != 2 || actors.entities[0].id != 7 ||
-      actors.entities[1].id != 10 || !actor_store.components.empty())
+  if (!destroyed || destroyed->id != 8 || actors.entities.size() != 2 ||
+      actors.entities[0].id != 7 || actors.entities[1].id != 10 || !actor_store.components.empty())
     return 1;
 
   clank::m5::ComponentStore store;
