@@ -4,9 +4,12 @@
 #include <rlgl.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <initializer_list>
+#include <string_view>
 #include <system_error>
 #include <unordered_map>
 #include <vector>
@@ -124,11 +127,27 @@ void Push3D(const Renderer& r, Draw3DEntry e) {
 // WHY: public header stays stdlib-only so translate to raylib color at the boundary.
 ::Color ToRay(Color c) { return ::Color{c.r, c.g, c.b, c.a}; }
 
+bool HasExtension(const std::string& path, std::initializer_list<std::string_view> allowed) {
+  std::string extension = std::filesystem::path(path).extension().string();
+  std::transform(extension.begin(), extension.end(), extension.begin(),
+                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+  return std::find(allowed.begin(), allowed.end(), extension) != allowed.end();
+}
+
+std::expected<void, AssetError> CheckAssetFile(const std::string& path,
+                                               std::initializer_list<std::string_view> allowed) {
+  if (!HasExtension(path, allowed)) return std::unexpected(AssetError::Unsupported);
+  std::error_code ec;
+  if (!std::filesystem::is_regular_file(path, ec)) return std::unexpected(AssetError::Missing);
+  return {};
+}
+
 // WHY one registry: textures outlive renderers (Game owns them); ids stay valid headless.
 struct TexEntry {
   int cells = 8;
   Color a{};
   Color b{};
+  std::string path;
   ::Texture2D gpu{};
   ::Model cube{};
   bool uploaded = false;
@@ -390,6 +409,13 @@ Model LoadModel(const std::string& path, Vec3 fallback_size) {
   Model model{.id = NextModelId()++, .fallback_size = fallback_size};
   Models()[model.id] = ModelEntry{.path = path, .fallback_size = fallback_size};
   return model;
+}
+
+std::expected<Model, AssetError> LoadModelFile(const std::string& path, Vec3 fallback_size) {
+  if (auto checked = CheckAssetFile(path, {".obj", ".gltf", ".glb", ".iqm", ".vox", ".m3d"});
+      !checked)
+    return std::unexpected(checked.error());
+  return LoadModel(path, fallback_size);
 }
 
 void UnloadModel(Model& model) {
@@ -757,7 +783,20 @@ void UnloadSfx(Audio& audio, const Sfx& sfx) {
 
 Texture LoadChecker(int cells, Color a, Color b) {
   Texture texture{.id = NextTexId()};
-  TexBackends()[texture.id] = TexEntry{cells > 0 ? cells : 1, a, b};
+  auto& entry = TexBackends()[texture.id];
+  entry.cells = cells > 0 ? cells : 1;
+  entry.a = a;
+  entry.b = b;
+  ++NextTexId();
+  return texture;
+}
+
+std::expected<Texture, AssetError> LoadTextureFile(const std::string& path) {
+  if (auto checked = CheckAssetFile(path, {".png", ".jpg", ".jpeg", ".bmp", ".tga", ".qoi"});
+      !checked)
+    return std::unexpected(checked.error());
+  Texture texture{.id = NextTexId()++};
+  TexBackends()[texture.id] = TexEntry{.path = path};
   return texture;
 }
 
@@ -791,7 +830,14 @@ void DrawCubeTextured(Renderer& r, float x, float y, float z, float sx, float sy
   }
   if (!tex->uploaded) {
     // WHY lazy upload: samples construct (and load textures) headless; GPU exists only with one.
-    ::Image img = ::GenImageChecked(64, 64, tex->cells, tex->cells, ToRay(tex->a), ToRay(tex->b));
+    ::Image img = tex->path.empty() ? ::GenImageChecked(64, 64, tex->cells, tex->cells,
+                                                        ToRay(tex->a), ToRay(tex->b))
+                                    : ::LoadImage(tex->path.c_str());
+    if (!img.data) {
+      TexBackends()[texture.id].uploaded = true;
+      ::DrawCube(::Vector3{x, y, z}, sx, sy, sz, ToRay(LitColor(r, tint)));
+      return;
+    }
     TexBackends()[texture.id].gpu = ::LoadTextureFromImage(img);
     ::UnloadImage(img);
     TexBackends()[texture.id].uploaded = true;
