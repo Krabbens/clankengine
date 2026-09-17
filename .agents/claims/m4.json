@@ -1,0 +1,13 @@
+{
+  "module": "m4",
+  "agent": "agent-codex",
+  "branch": "a/m4-set-velocity",
+  "started_utc": "2026-09-16T23:54:51Z",
+  "heartbeat_utc": "2026-09-16T23:59:31Z",
+  "ttl_min": 30,
+  "intent": "Add public Box3D SetVelocity and deterministic selftest",
+  "paths": [
+    "core/m4-physics3d/"
+  ],
+  "exception": null
+}

@@ -1,6 +1,50 @@
+#include <cmath>
 #include <cstdio>
 
 #include "m4/physics3d.hpp"
+
+namespace {
+
+constexpr float kDt = 1.0f / 60.0f;
+
+bool SameVec(clank::m4::Vec3 a, clank::m4::Vec3 b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+
+bool NearVec(clank::m4::Vec3 actual, clank::m4::Vec3 expected) {
+  return std::fabs(actual.x - expected.x) < 1.0e-5f && std::fabs(actual.y - expected.y) < 1.0e-5f &&
+         std::fabs(actual.z - expected.z) < 1.0e-5f;
+}
+
+struct Snapshot {
+  clank::m4::Vec3 position{};
+  clank::m4::Vec3 velocity{};
+};
+
+Snapshot RunScripted() {
+  clank::m4::World* world = clank::m4::CreateWorld({0.0f, -10.0f, 0.0f});
+  if (world == nullptr) return {};
+  clank::m4::BodyDef def{};
+  def.type = clank::m4::BodyType::Dynamic;
+  def.position = {1.0f, 4.0f, -2.0f};
+  clank::m4::Body* actor = clank::m4::CreateBody(world, def);
+  if (actor == nullptr) {
+    clank::m4::DestroyWorld(world);
+    return {};
+  }
+  for (int frame = 0; frame < 60; ++frame) {
+    if (frame == 0) clank::m4::SetVelocity(actor, {2.0f, 0.0f, -1.0f});
+    if (frame == 20) clank::m4::SetVelocity(actor, {1.0f, 0.5f, -2.0f});
+    if (frame == 40) clank::m4::SetVelocity(actor, {0.0f, 1.0f, 0.0f});
+    clank::m4::Step(world, kDt);
+  }
+  const Snapshot snapshot{clank::m4::GetPosition(actor), clank::m4::GetVelocity(actor)};
+  clank::m4::DestroyBody(actor);
+  clank::m4::DestroyWorld(world);
+  return snapshot;
+}
+
+}  // namespace
 
 // WHY: regression test for gravity integration; static bodies must never move.
 int main() {
@@ -14,18 +58,29 @@ int main() {
   still.position = {3.0f, 5.0f, -2.0f};
   clank::m4::Body* stat = clank::m4::CreateBody(w, still);
   if (dyn == nullptr || stat == nullptr) return 1;
-  constexpr float kDt = 1.0f / 60.0f;
+  clank::m4::SetVelocity(nullptr, {8.0f, 9.0f, 10.0f});
+  clank::m4::SetVelocity(stat, {8.0f, 9.0f, 10.0f});
+  const clank::m4::Vec3 commanded{2.0f, 3.0f, -1.0f};
+  clank::m4::SetVelocity(dyn, commanded);
   for (int i = 0; i < 60; ++i) clank::m4::Step(w, kDt);
   float y = clank::m4::GetPosition(dyn).y;
-  float vy = clank::m4::GetVelocity(dyn).y;
+  clank::m4::Vec3 velocity = clank::m4::GetVelocity(dyn);
   clank::m4::Vec3 sp = clank::m4::GetPosition(stat);
-  bool ok = (y < 10.0f) && (vy < 0.0f) && (sp.x == 3.0f) && (sp.y == 5.0f) && (sp.z == -2.0f);
-  std::printf("m4 falling y=%.3f vy=%.3f static=(%.1f,%.1f,%.1f) %s\n", y, vy, sp.x, sp.y, sp.z,
-              ok ? "PASS" : "FAIL");
+  const clank::m4::Vec3 expected_velocity{commanded.x, commanded.y - 10.0f, commanded.z};
+  bool ok = (y < 10.0f) && NearVec(velocity, expected_velocity) && (sp.x == 3.0f) &&
+            (sp.y == 5.0f) && (sp.z == -2.0f) && SameVec(clank::m4::GetVelocity(stat), {});
+  std::printf("m4 falling y=%.3f velocity=(%.1f,%.1f,%.1f) static=(%.1f,%.1f,%.1f) %s\n", y,
+              velocity.x, velocity.y, velocity.z, sp.x, sp.y, sp.z, ok ? "PASS" : "FAIL");
   clank::m4::DestroyBody(dyn);
   clank::m4::DestroyBody(stat);
   clank::m4::DestroyWorld(w);
   if (!ok) return 1;
+  const Snapshot first = RunScripted();
+  const Snapshot second = RunScripted();
+  const bool deterministic =
+      SameVec(first.position, second.position) && SameVec(first.velocity, second.velocity);
+  std::printf("m4 scripted 60-step determinism=%s\n", deterministic ? "PASS" : "FAIL");
+  if (!deterministic) return 1;
   // WHY contacts: a ball falls onto a floor; a begin event must appear exactly at first touch.
   clank::m4::World* cw = clank::m4::CreateWorld({0.0f, -10.0f, 0.0f});
   if (cw == nullptr) return 1;
