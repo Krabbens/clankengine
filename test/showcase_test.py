@@ -7,7 +7,7 @@ import sys
 import tempfile
 
 binary, replay = map(lambda p: str(Path(p).resolve()), sys.argv[1:])
-name = Path(binary).name
+name = Path(binary).stem
 # WHY load the schema instead of hardcoding keys: the file is the contract, this test keeps it
 # honest on every dump. No third-party validator (dependency rule); structure asserts suffice.
 schema = json.loads((Path(__file__).resolve().parent.parent / "spec" / "scene.schema.json").read_text())

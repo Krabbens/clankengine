@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 
 binary, replay = map(lambda p: str(Path(p).resolve()), sys.argv[1:])
-name = Path(binary).name
+name = Path(binary).stem
 assert name == "zelda"
 with tempfile.TemporaryDirectory() as temp:
     root = Path(temp)

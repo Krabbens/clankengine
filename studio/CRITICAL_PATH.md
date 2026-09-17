@@ -1,5 +1,6 @@
 # Critical Path
 
-- Current blocker: no sample consumes the new hierarchy yet, so the capability is only proven by a module self-test.
-- Next step: expose one parent-linked scene through a headless sample and dump assertion.
-- Likely next blocker: components need an ownership and serialization model that does not turn `m5` into a hidden manager.
+- Current blocker: PR #107 already owns the m8 module guard while this verified m8 slice is open.
+- Next step: close or update the older m8 PR through its owner, then rerun guard and merge #109.
+- Verified foundation: m1 live input, m2 checked asset handles, m3 QueryAabb, m4 SetVelocity, m5 ComponentStore, m6 named actions, and m7 Windows shot harness are merged.
+- Likely next slice: deterministic contact filtering/query policy; keep it explicit and avoid turning physics into a hidden manager.

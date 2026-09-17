@@ -1,6 +1,7 @@
 // clank app: agent-first game loop on m0 (flags) + m1 (loop) + m2 (render) + m5 (scene) + m6
 // (input). Logs -> stderr; machine-readable result paths -> stdout.
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <string>
 
@@ -34,7 +35,10 @@ clank::m5::Scene DemoScene(int seed) {
   return s;
 }
 
-std::string ShotPath(int frame) { return "/tmp/clank_frame" + std::to_string(frame) + ".png"; }
+std::string ShotPath(int frame) {
+  return (std::filesystem::temp_directory_path() / ("clank_frame" + std::to_string(frame) + ".png"))
+      .string();
+}
 
 }  // namespace
 

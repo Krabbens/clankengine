@@ -19,13 +19,13 @@ with tempfile.TemporaryDirectory(prefix="clank-claim-") as temp:
     try:
         worktree_tool = str(worktree / "tools" / "clank-claim")
         missing_intent = subprocess.run(
-            [worktree_tool, "claim", "m7", "--agent", "test-agent", "--topic", topic],
+            [sys.executable, worktree_tool, "claim", "m7", "--agent", "test-agent", "--topic", topic],
             cwd=worktree, capture_output=True, text=True)
         assert missing_intent.returncode != 0
         assert "requires --intent" in missing_intent.stderr
         try:
             claimed = subprocess.run(
-                [worktree_tool, "claim", "m7", "--agent", "test-agent", "--topic", topic,
+                [sys.executable, worktree_tool, "claim", "m7", "--agent", "test-agent", "--topic", topic,
                  "--intent", "verify linked worktree claim"],
                 cwd=worktree, check=True, capture_output=True, text=True)
         except subprocess.CalledProcessError as err:
@@ -38,13 +38,13 @@ with tempfile.TemporaryDirectory(prefix="clank-claim-") as temp:
             assert "claimed m7" in claimed.stdout
             claimed_ok = True
             rows = json.loads(subprocess.run(
-                [tool, "list", "--json"], cwd=repo, check=True, capture_output=True, text=True
+                [sys.executable, tool, "list", "--json"], cwd=repo, check=True, capture_output=True, text=True
             ).stdout)
             m7 = next(row for row in rows if row["module"] == "m7")
             assert m7["status"] == "fresh" and m7["agent"] == "test-agent"
     finally:
         if claimed_ok:
-            subprocess.run([worktree_tool, "release", "m7", "--agent", "test-agent"],
+            subprocess.run([sys.executable, worktree_tool, "release", "m7", "--agent", "test-agent"],
                            cwd=worktree, check=False, capture_output=True, text=True)
         subprocess.run(["git", "worktree", "remove", "--force", str(worktree)],
                        cwd=repo, check=True, capture_output=True, text=True)

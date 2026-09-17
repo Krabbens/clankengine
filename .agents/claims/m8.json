@@ -1,0 +1,15 @@
+{
+  "module": "m8",
+  "agent": "codex",
+  "branch": "a/m8-hierarchy-sample",
+  "started_utc": "2026-09-16T20:12:34Z",
+  "heartbeat_utc": "2026-09-17T00:50:37Z",
+  "ttl_min": 30,
+  "intent": "Prove parent-linked scene transforms in a headless sample",
+  "paths": [
+    "examples/",
+    "test/",
+    "spec/"
+  ],
+  "exception": null
+}

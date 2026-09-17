@@ -7,27 +7,36 @@ through explicit, deterministic slices rather than a large editor framework.
 
 ## Current experiment
 
-`m5-scene-hierarchy`: add stable parent-linked scene entities and deterministic
-world-transform resolution.
+Build a thin Unreal-like runtime foundation from deterministic slices: m3 AABB
+queries, m4 velocity control, m5 scene/components, m6 named actions, m7
+Windows observability, m1 live keyboard polling, and the m8 hierarchy sample.
 
 ## Last decision
 
-Scene hierarchy is the first capability slice because it supports Actor-like
-composition, prefab roots, and later component attachment without adding a
-runtime manager or a new dependency.
+The runtime stays explicit and manager-free: stable entity/component IDs,
+deterministic input actions, controllable 2D/3D physics, and headless
+dump/see/drive are the useful foundation before any editor or large object
+framework.
 
 ## Open
 
-The next decision is how to represent components and asset ownership while
-keeping the public core API small and headless-observable.
+The next decision is how to resolve the two open m8 PRs while keeping one
+claim per module. Component ownership, action mapping, live keyboard polling,
+checked asset handles, and explicit Actor lifecycle are now implemented; richer
+behavior/physics integration remains a future slice.
 
 ## Evidence so far
 
-The Windows build passes. The focused suite passes `m5-selftest`, headless dump,
-replay, and minimal sample. Full CTest still has pre-existing Windows harness
-failures around `.exe` names and direct script execution.
+The integrated Windows build passes full CTest `18/18`. m3 QueryAabb, m4
+SetVelocity,
+m1 live input, m2 asset errors, m3 QueryAabb, m4 SetVelocity, m5
+ComponentStore/Actor lifecycle, m6 named actions, m7 `shot.py`, and the
+hierarchy sample all pass focused tests; the m7 smoke collects deterministic
+JSON and PNG artifacts on Windows.
 
 ## Next action
 
-Add one headless sample assertion that consumes resolved hierarchy data, then
-separate the Windows CTest harness repair into its own m8 sprint.
+Keep PR #109 ready and resolve the older open m8 PR #107 before merging the
+sample. After the m8 queue is resolved, take the smallest m2 asset-loading
+slice with explicit failure results. No code or test failure remains in the
+current local integration.
