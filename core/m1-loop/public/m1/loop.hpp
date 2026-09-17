@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <expected>
 #include <functional>
 #include <string>
@@ -45,6 +46,16 @@ void Run(const LoopConfig& cfg, const UpdateFn& update);
 // display.
 std::expected<void, std::string> OpenWindow(const WindowConfig& cfg);
 void CloseWindow();
+inline constexpr int kKeyCount = 512;
+
+struct InputSnapshot {
+  std::array<bool, kKeyCount> down{};
+
+  [[nodiscard]] bool IsDown(int key) const { return key >= 0 && key < kKeyCount && down[key]; }
+};
+
+// WHY: no window means no live input, so agents can poll the same API in headless runs.
+[[nodiscard]] InputSnapshot PollInput();
 [[nodiscard]] bool ShouldClose();
 // WHY: m2 draw calls belong between BeginFrame/EndFrame so one frame batches GPU work.
 void BeginFrame(unsigned char r, unsigned char g, unsigned char b, unsigned char a);

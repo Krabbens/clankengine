@@ -4,6 +4,22 @@
 
 int main() {
   // WHY: windowed code is verified by compile+link only; CI has no display so never open here.
+  clank::m1::CloseWindow();
+  const auto first_input = clank::m1::PollInput();
+  const auto second_input = clank::m1::PollInput();
+  if (first_input.down != second_input.down) {
+    std::fprintf(stderr, "m1: PollInput changed between headless polls\n");
+    return 1;
+  }
+  for (int key = 0; key < clank::m1::kKeyCount; ++key) {
+    if (first_input.down[key] || first_input.IsDown(key)) {
+      std::fprintf(stderr, "m1: PollInput headless key %d was down\n", key);
+      return 1;
+    }
+  }
+  if (first_input.IsDown(-1) || first_input.IsDown(clank::m1::kKeyCount)) return 1;
+  clank::m1::CloseWindow();
+  if (clank::m1::PollInput().down != first_input.down) return 1;
   if (clank::m1::ShouldClose()) {
     std::fprintf(stderr, "m1: ShouldClose want false headless\n");
     return 1;

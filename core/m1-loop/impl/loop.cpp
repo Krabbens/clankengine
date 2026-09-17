@@ -54,6 +54,13 @@ void CloseWindow() {
   if (::IsWindowReady()) ::CloseWindow();
 }
 
+InputSnapshot PollInput() {
+  InputSnapshot snapshot;
+  if (!::IsWindowReady()) return snapshot;
+  for (int key = 0; key < kKeyCount; ++key) snapshot.down[key] = ::IsKeyDown(key);
+  return snapshot;
+}
+
 bool ShouldClose() {
   // WHY: WindowShouldClose without a window must read as false so headless stays idle.
   if (!::IsWindowReady()) return false;
