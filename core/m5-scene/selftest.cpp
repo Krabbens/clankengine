@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstdio>
+#include <limits>
 #include <utility>
 
 #include "m5/scene.hpp"
@@ -79,6 +80,32 @@ int main() {
   auto empty_type = components;
   empty_type[1].type.clear();
   if (clank::m5::ResolveComponents(tree, empty_type, 11)) return 1;
+
+  clank::m5::Scene actors;
+  auto root = clank::m5::SpawnEntity(actors, {7, "root"});
+  auto child = clank::m5::SpawnEntity(actors, {8, "child", 1, 0, 0, 1, 1, 0, 7});
+  auto sibling = clank::m5::SpawnEntity(actors, {10, "sibling"});
+  if (!root || *root != 7 || !child || *child != 8 || !sibling || *sibling != 10) return 1;
+  if (actors.entities.size() != 3 || actors.entities[0].id != 7 || actors.entities[1].id != 8 ||
+      actors.entities[1].parent != 7 || actors.entities[2].id != 10)
+    return 1;
+  if (clank::m5::SpawnEntity(actors, {7, "duplicate"}) ||
+      clank::m5::SpawnEntity(actors, {9, "dangling", 0, 0, 0, 1, 1, 0, 99}) ||
+      clank::m5::SpawnEntity(actors, {9, "cycle", 0, 0, 0, 1, 1, 0, 9}))
+    return 1;
+  auto malformed = clank::m5::Entity{9, "nan"};
+  malformed.x = std::numeric_limits<float>::quiet_NaN();
+  if (clank::m5::SpawnEntity(actors, malformed)) return 1;
+  clank::m5::ComponentStore actor_store;
+  if (!clank::m5::AttachComponent(actor_store, actors, {700, 8, "Sprite"})) return 1;
+  if (clank::m5::DestroyEntity(actors, actor_store, 99) ||
+      clank::m5::DestroyEntity(actors, actor_store, 7))
+    return 1;
+  auto destroyed = clank::m5::DestroyEntity(actors, actor_store, 8);
+  if (!destroyed || destroyed->id != 8 || actors.entities.size() != 2 ||
+      actors.entities[0].id != 7 || actors.entities[1].id != 10 || !actor_store.components.empty())
+    return 1;
+
   clank::m5::ComponentStore store;
   auto attached_collider = clank::m5::AttachComponent(store, tree, components[2]);
   if (!attached_collider || *attached_collider != 102 || store.components.size() != 1) return 1;

@@ -1,0 +1,13 @@
+{
+  "module": "m5",
+  "agent": "agent-codex",
+  "branch": "a/m5-actor-lifecycle",
+  "started_utc": "2026-09-17T00:40:53Z",
+  "heartbeat_utc": "2026-09-17T00:44:42Z",
+  "ttl_min": 30,
+  "intent": "Add deterministic validated scene entity spawn and leaf destroy lifecycle",
+  "paths": [
+    "core/m5-scene/"
+  ],
+  "exception": null
+}
