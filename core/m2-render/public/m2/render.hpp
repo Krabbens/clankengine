@@ -110,7 +110,13 @@ struct Model {
   Vec3 fallback_size{1, 1, 1};
 };
 
+// Checked file loaders classify an unknown extension as Unsupported and a missing or non-regular
+// file with a supported extension as Missing. GPU upload remains lazy until a windowed draw.
+enum class AssetError { Missing, Unsupported };
+
 Model LoadModel(const std::string& path, Vec3 fallback_size = {1, 1, 1});
+std::expected<Model, AssetError> LoadModelFile(const std::string& path,
+                                               Vec3 fallback_size = {1, 1, 1});
 void UnloadModel(Model& model);
 
 struct Material {
@@ -179,6 +185,7 @@ struct Texture {
 };
 
 Texture LoadChecker(int cells, Color a, Color b);
+std::expected<Texture, AssetError> LoadTextureFile(const std::string& path);
 void UnloadTexture(Texture& texture);
 void DrawCubeTextured(Renderer& r, float x, float y, float z, float sx, float sy, float sz,
                       Texture texture, Color tint);
