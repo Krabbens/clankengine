@@ -10,8 +10,7 @@
 
 ### BACKLOG
 
-- `M5-COMPONENTS-001` — design explicit component ownership after hierarchy review.
-- `M8-ACTOR-LIFECYCLE-001` — define the smallest explicit spawn/update/destroy actor path.
+- `M3-CONTACT-FILTERS-001` — define deterministic contact/query filtering without a physics manager.
 
 ### READY
 
@@ -31,6 +30,7 @@
 - `M4-SET-VELOCITY-001` — null/static-safe Box3D velocity control with deterministic scripted selftest; merged PR #115.
 - `M1-LIVE-INPUT-001` — headless-safe current keyboard snapshot with windowed raylib polling; merged PR #116.
 - `M2-ASSETS-001` — checked file-backed model/texture errors with lazy headless-safe loading; merged PR #117.
+- `M5-ACTOR-LIFECYCLE-001` — validated spawn and leaf destroy with component cleanup; merged PR #118.
 - `M5-COMPONENTS-001` — owner-validated ComponentStore and deterministic lookup; merged PRs #110 and #113.
 - `M6-ACTION-MAP-001` — named action bindings over `.clk` replay; merged PR #111.
 - `M7-WINDOWS-SHOT-001` — stdlib-only portable shot runner and tests; merged PR #112.
