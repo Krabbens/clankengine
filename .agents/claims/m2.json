@@ -1,0 +1,13 @@
+{
+  "module": "m2",
+  "agent": "agent-01",
+  "branch": "a/m2-assets-error-contract",
+  "started_utc": "2026-09-17T00:22:29Z",
+  "heartbeat_utc": "2026-09-17T00:32:10Z",
+  "ttl_min": 30,
+  "intent": "Add deterministic file-backed model and texture asset errors with lazy headless-safe loading",
+  "paths": [
+    "core/m2-render/"
+  ],
+  "exception": null
+}

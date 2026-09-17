@@ -1,6 +1,7 @@
 #include <raylib.h>
 
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 
 #include "m2/render.hpp"
@@ -80,21 +81,58 @@ int main() {
   clank::m2::UnloadTexture(checker);
   clank::m2::UnloadTexture(bad_tex);
   if (checker.id >= 0) return 1;
+  const auto asset_dir = std::filesystem::temp_directory_path();
+  const auto missing_model_path = asset_dir / "m2-selftest-missing.obj";
+  const auto missing_texture_path = asset_dir / "m2-selftest-missing.png";
+  const auto unsupported_path = asset_dir / "m2-selftest-unsupported.txt";
+  const auto model_path = asset_dir / "m2-selftest-model.obj";
+  const auto texture_path = asset_dir / "m2-selftest-texture.png";
+  std::remove(missing_model_path.string().c_str());
+  std::remove(missing_texture_path.string().c_str());
+  {
+    std::ofstream unsupported(unsupported_path);
+    unsupported << "placeholder";
+    std::ofstream model_file(model_path);
+    model_file << "placeholder";
+    std::ofstream texture_file(texture_path);
+    texture_file << "placeholder";
+  }
+  const auto missing_model = clank::m2::LoadModelFile(missing_model_path.string());
+  const auto missing_texture = clank::m2::LoadTextureFile(missing_texture_path.string());
+  const auto unsupported_model = clank::m2::LoadModelFile(unsupported_path.string());
+  const auto unsupported_texture = clank::m2::LoadTextureFile(unsupported_path.string());
+  if (missing_model || missing_model.error() != clank::m2::AssetError::Missing || missing_texture ||
+      missing_texture.error() != clank::m2::AssetError::Missing || unsupported_model ||
+      unsupported_model.error() != clank::m2::AssetError::Unsupported || unsupported_texture ||
+      unsupported_texture.error() != clank::m2::AssetError::Unsupported)
+    return 1;
+  auto file_model = clank::m2::LoadModelFile(model_path.string(), {2, 3, 4});
+  auto file_texture = clank::m2::LoadTextureFile(texture_path.string());
+  if (!file_model || !file_texture) return 1;
   clank::m2::Model model = clank::m2::LoadModel("", {2, 3, 4});
   clank::m2::Material material = clank::m2::CreateMaterial({240, 180, 80, 255}, 2);
   clank::m2::Animation animation = clank::m2::CreateAnimation(3, 2);
   clank::m2::AdvanceAnimation(animation, 0.5f);
   if (model.id < 0 || material.id < 0 || material.roughness != 1 || animation.frame != 1) return 1;
   clank::m2::DrawModel(r, model, {0, 0, 0}, {1, 1, 1}, material, animation);
+  clank::m2::DrawModel(r, *file_model, {0, 0, 0}, {1, 1, 1}, material);
+  clank::m2::DrawCubeTextured(r, 0, 0, 0, 1, 1, 1, *file_texture, white);
   const auto* model_entry = clank::m2::Draw3DLogAt(r, 2);
   if (!model_entry || model_entry->kind != clank::m2::Draw3DKind::Model ||
       model_entry->asset != model.id || model_entry->a != 2 || model_entry->b != 3 ||
       model_entry->c != 4)
     return 1;
   clank::m2::UnloadModel(model);
+  clank::m2::UnloadModel(*file_model);
+  clank::m2::UnloadTexture(*file_texture);
   clank::m2::UnloadMaterial(material);
   clank::m2::UnloadAnimation(animation);
-  if (model.id >= 0 || material.id >= 0 || animation.id >= 0) return 1;
+  if (model.id >= 0 || file_model->id >= 0 || file_texture->id >= 0 || material.id >= 0 ||
+      animation.id >= 0)
+    return 1;
+  std::remove(unsupported_path.string().c_str());
+  std::remove(model_path.string().c_str());
+  std::remove(texture_path.string().c_str());
   // Rasterized headless frames compare by pixels; bad inputs are errors, not false.
   const std::string shot_b = "/tmp/m2-selftest-shot-b.png";
   if (!clank::m2::TakeScreenshot(r, shot_b)) return 1;
