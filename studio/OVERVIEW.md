@@ -21,17 +21,18 @@ framework.
 ## Open
 
 The next decision is how to resolve the two open m8 PRs while keeping one
-claim per module. Component ownership, action mapping, and live keyboard
-polling are now implemented; checked asset handles and richer Actor lifecycle
-remain future slices.
+claim per module. Component ownership, action mapping, live keyboard polling,
+and checked asset handles are now implemented; richer Actor lifecycle remains
+a future slice.
 
 ## Evidence so far
 
 The integrated Windows build passes full CTest `18/18`. m3 QueryAabb, m4
 SetVelocity,
-m1 live input, m3 QueryAabb, m4 SetVelocity, m5 ComponentStore, m6 named
-actions, m7 `shot.py`, and the hierarchy sample all pass focused tests; the m7
-smoke collects deterministic JSON and PNG artifacts on Windows.
+m1 live input, m2 asset errors, m3 QueryAabb, m4 SetVelocity, m5
+ComponentStore, m6 named actions, m7 `shot.py`, and the hierarchy sample all
+pass focused tests; the m7 smoke collects deterministic JSON and PNG artifacts
+on Windows.
 
 ## Next action
 
